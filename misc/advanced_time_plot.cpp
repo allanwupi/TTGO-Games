@@ -19,15 +19,15 @@ enum function {
   ANALOG_READ,
   SINE,
   DECAYING_SINE,
-  COSINE_SINE,
+  COSINE_SINE_SUM,
+  COSINE_SINE_PRODUCT,
 };
-function functionSelect = COSINE_SINE;
+
+function functionSelect = ANALOG_READ;
 char functionName[50];
 
 // For the ANALOG_READ option, read analog values from this pin:
 const int ANALOG_INPUT_PIN = 1;
-
-int next_data_point(int sample_index, float omega = 0.1, float alpha = 0.01);
 
 #define X_DATUM 35
 #define Y_DATUM 10
@@ -48,9 +48,11 @@ const int NUM_DATA_POINTS = (X_LENGTH / X_STEP) + 1;
 
 int data[NUM_DATA_POINTS];
 
-TFT_eSPI tft = TFT_eSPI(); // 320 x 170
+int next_data_point(int sample_index, float omega = 0.1, float alpha = 0.009);
 
 void drawGrid();
+
+TFT_eSPI tft = TFT_eSPI(); // 320 x 170
 
 void setup() {
   Serial.begin(115200);
@@ -114,11 +116,14 @@ int next_data_point(int sample_index, float omega, float alpha) {
     sprintf(functionName, "sin(%.3ft)", omega);
     return max_y_value/2 * (1 + sin(sample_index * omega));
   case (DECAYING_SINE):
-    sprintf(functionName, "exp(-%.3ft) sin(%.3ft)", alpha, omega);
+    sprintf(functionName, "exp(-%.3ft)sin(%.3ft)", alpha, omega);
     return max_y_value/2 * (1 + pow(2.71828f, -sample_index * alpha) * sin(sample_index * omega));
-  case (COSINE_SINE):
-    sprintf(functionName, "cos(%.3ft) + sin(%.3ft)", alpha, omega);
+  case (COSINE_SINE_SUM):
+    sprintf(functionName, "cos(%.3ft)+sin(%.3ft)", alpha, omega);
     return max_y_value/4 * (2 + cos(sample_index * alpha) + sin(sample_index * omega));
+  case (COSINE_SINE_PRODUCT):
+    sprintf(functionName, "cos(%.3ft)sin(%.3ft)", alpha, omega);
+    return max_y_value/2 * (1 + cos(sample_index * alpha) * sin(sample_index * omega));
   default:
     return 0;
   }
