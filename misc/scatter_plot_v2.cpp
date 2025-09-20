@@ -4,38 +4,43 @@
 #include <Arduino.h>
 #include <TFT_eSPI.h>
 
-// Read analog values from input pin
-#define ANALOG_INPUT_PIN 1
-
 // Set update speed (don't set too fast or the TTGO will overheat)
-int delay_millis = 100; 
+int delay_millis = 80;
 
 // Initial estimate of maximum analogue reading
 int max_y_value = 200;
 bool auto_y_range = false;
 
 // Define spacing between data points
-const int X_STEP = 2;
+const int X_STEP = 1;
 
 enum function {
-  ANALOG_PIN,
+  ANALOG_READ,
   SINE_WAVE,
-  DECAYING_SINE_WAVE
+  DECAYING_SINE_WAVE,
+  COSINE_SINE_SUM,
 };
 
-function functionSelect = SINE_WAVE;
+// For the ANALOG_READ option, read analog values from this pin:
+#define ANALOG_INPUT_PIN 1
+
+function functionSelect = COSINE_SINE_SUM;
 
 int next_data_point(int sample_index, float omega = 0.1, float alpha = 0.01);
 
 int next_data_point(int sample_index, float omega, float alpha) {
   switch (functionSelect) {
+    case (ANALOG_READ):
+      if (!auto_y_range) auto_y_range = true;
+      return analogRead(ANALOG_INPUT_PIN);
     case (SINE_WAVE):
       return max_y_value/2 * (1 + sin(sample_index * omega));
     case (DECAYING_SINE_WAVE):
       return max_y_value/2 * (1 + pow(2.71828f, -sample_index * alpha) * sin(sample_index * omega));
+    case (COSINE_SINE_SUM):
+      return max_y_value/4 * (2 + sin(sample_index * omega) + cos(sample_index * alpha));
     default:
-      if (!auto_y_range) auto_y_range = true;
-      return analogRead(ANALOG_INPUT_PIN);
+      return 0;
   }
 }
 
@@ -104,9 +109,9 @@ void loop() {
 
 void drawGrid() {
   tft.fillScreen(BACKGROUND_COLOUR);
-  tft.drawNumber(max_y_value, X_DATUM-8, Y_DATUM-3); // with padding
-  tft.drawNumber(max_y_value/2, X_DATUM-8, Y_DATUM-3 + Y_HEIGHT/2); // with padding
-  tft.drawNumber(0, X_DATUM-8, Y_DATUM-3 + Y_HEIGHT); // with padding
+  tft.drawNumber(max_y_value, X_DATUM-8, Y_DATUM-3); // labels with padding (right indent)
+  tft.drawNumber(max_y_value/2, X_DATUM-8, Y_DATUM-3 + Y_HEIGHT/2);
+  tft.drawNumber(0, X_DATUM-8, Y_DATUM-3 + Y_HEIGHT);
   for (int i = 1; i < NUM_X_TICKS-1; i++) {
     tft.drawFastVLine(X_DATUM + i*X_TICK_SIZE, Y_DATUM, Y_HEIGHT, GRIDLINES_COLOUR);
   }
