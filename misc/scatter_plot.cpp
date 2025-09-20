@@ -12,9 +12,32 @@ int delay_millis = 100;
 
 // Initial estimate of maximum analogue reading
 int max_y_value = 200;
+bool auto_y_range = false;
 
 // Define spacing between data points
 const int X_STEP = 2;
+
+enum function {
+  ANALOG_PIN,
+  SINE_WAVE,
+  DECAYING_SINE_WAVE
+};
+
+function functionSelect = SINE_WAVE;
+
+int next_data_point(int sample_index, float omega = 0.1, float alpha = 0.01);
+
+int next_data_point(int sample_index, float omega, float alpha) {
+  switch (functionSelect) {
+    case (SINE_WAVE):
+      return max_y_value/2 * (1 + sin(sample_index * omega));
+    case (DECAYING_SINE_WAVE):
+      return max_y_value/2 * (1 + pow(2.71828f, -sample_index * alpha) * sin(sample_index * omega));
+    default:
+      if (!auto_y_range) auto_y_range = true;
+      return analogRead(ANALOG_INPUT_PIN);
+  }
+}
 
 #define X_DATUM 35
 #define Y_DATUM 10
@@ -56,14 +79,16 @@ void loop() {
   static int running_sum = 0;
   int array_index = sample_index % (NUM_DATA_POINTS);
 
-  int analog_value = analogRead(ANALOG_INPUT_PIN);
+  int analog_value = next_data_point(sample_index);
+
   running_sum += analog_value;
   if (analog_value > running_max) running_max = analog_value;
   int normalised_y = constrain(map(analog_value, 0, max_y_value, 0, Y_HEIGHT), 0, Y_HEIGHT);
   data[array_index] = normalised_y;
 
   if (sample_index > 0 && array_index == 0) {
-    max_y_value = constrain(running_max + running_sum / NUM_DATA_POINTS, 0, 4095) / 10 * 10;
+    if (auto_y_range)
+      max_y_value = constrain(running_max + running_sum / NUM_DATA_POINTS, 0, 4095) / 10 * 10;
     drawGrid();
     running_max = 0;
     running_sum = 0;
