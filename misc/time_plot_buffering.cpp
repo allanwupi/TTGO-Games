@@ -11,7 +11,7 @@ int delayMillis = 200;
 // Initial estimate of maximum analogue reading
 int max_y_value = 100;
 int old_max_y_value = 0;
-bool auto_ranging = false;
+bool auto_ranging = true;
 
 const int AUTO_RANGE_STEP = 20;
 
@@ -122,9 +122,8 @@ void loop() {
   prev_y = curr_y;
   sample_index++;
 
-  actualDelay = constrain(delayMillis - (millis()-lastUpdateTime), 0, delayMillis);
-  // Serial.println(lastUpdateTime);
-  delay(actualDelay);
+  actualDelay = delayMillis - (millis()-lastUpdateTime);
+  if (actualDelay > 0) delay(actualDelay);
   lastUpdateTime = millis();
 }
 
@@ -196,19 +195,22 @@ int get_data_point(int sample_index, float alpha, float omega) {
   float alpha_t = 1000 * alpha / delayMillis;
   switch (functionSelect) {
   case (ANALOG_READ):
-    if (!auto_ranging) auto_ranging = true;
     sprintf(functionName, "Reading Analog Pin %d", ANALOG_INPUT_PIN);
     return analogRead(ANALOG_INPUT_PIN);
   case (SINE):
+    if (auto_ranging) auto_ranging = false;
     sprintf(functionName, "sin(%.4ft)", omega_t);
     return max_y_value/2 * (1 + sin(sample_index * omega));
   case (DECAYING_SINE):
+    if (auto_ranging) auto_ranging = false;
     sprintf(functionName, "exp(-%.4ft)sin(%.4ft)", alpha_t, omega_t);
     return max_y_value/2 * (1 + pow(2.71828f, -sample_index * alpha) * sin(sample_index * omega));
   case (COSINE_SINE_SUM):
+    if (auto_ranging) auto_ranging = false;
     sprintf(functionName, "cos(%.4ft)+sin(%.4ft)", alpha_t, omega_t);
     return max_y_value/4 * (2 + cos(sample_index * alpha) + sin(sample_index * omega));
   case (COSINE_SINE_PRODUCT):
+    if (auto_ranging) auto_ranging = false;
     sprintf(functionName, "cos(%.4ft)sin(%.4ft)", alpha_t, omega_t);
     return max_y_value/2 * (1 + cos(sample_index * alpha) * sin(sample_index * omega));
   case (ULTRASONIC_SIGNAL):
@@ -257,4 +259,5 @@ void drawGrid(bool buffer_full, int start, int end) {
       prev_index = i;
     }
   }
+  // Serial.println(millis());
 }
