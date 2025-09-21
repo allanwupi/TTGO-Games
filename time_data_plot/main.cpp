@@ -182,22 +182,22 @@ void userSelectFunction() {
       for (int i = 0; i < 6; i++) {
         tft.drawString(functionNames[i], X_DATUM, Y_DATUM+20*(i+1));
       }
-    }
-    tft.setTextColor(DATA_COLOUR, BACKGROUND_COLOUR);
-    tft.drawString(functionNames[currChoice], X_DATUM, Y_DATUM+20*(currChoice+1));
-    switch (currChoice) {
-    case (0):
-      functionSelect = ANALOG_READ; break;
-    case (1):
-      functionSelect = PURE_SINUSOID; break;
-    case (2):
-      functionSelect = COSINE_SINE_SUM; break;
-    case (3):
-      functionSelect = FREQUENCY_MODULATION; break;
-    case (4):
-      functionSelect = AMPLITUDE_MODULATION; break;
-    case (5):
-      functionSelect = CUSTOM_FUNCTION; break;
+      tft.setTextColor(DATA_COLOUR, BACKGROUND_COLOUR);
+      tft.drawString(functionNames[currChoice], X_DATUM, Y_DATUM+20*(currChoice+1));
+      switch (currChoice) {
+        case (0):
+          functionSelect = ANALOG_READ; break;
+        case (1):
+          functionSelect = PURE_SINUSOID; break;
+        case (2):
+          functionSelect = COSINE_SINE_SUM; break;
+        case (3):
+          functionSelect = FREQUENCY_MODULATION; break;
+        case (4):
+          functionSelect = AMPLITUDE_MODULATION; break;
+        case (5):
+          functionSelect = CUSTOM_FUNCTION; break;
+      }
     }
     tft.setTextColor(AXIS_COLOUR, BACKGROUND_COLOUR);
     prevChoice = currChoice;
