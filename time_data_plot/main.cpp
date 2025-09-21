@@ -3,7 +3,7 @@
 // Date: 21 September 2025
 #include <Arduino.h>
 #include <TFT_eSPI.h>
-#include "ultrasonic.h"
+// #include "ultrasonic.h"
 
 // Set update speed (don't set too fast or the TTGO will overheat)
 int delayMillis = 100;
@@ -15,7 +15,7 @@ bool enableUserSelect = true;
 bool enableGridlines = true;
 
 int AUTO_STEP = 20;
-int X_STEP = 2;
+int X_STEP = 5;
 int MIN_Y_RANGE = 100;
 
 int maxY = MIN_Y_RANGE;
@@ -33,10 +33,10 @@ uint16_t DATA_COLOUR = TFT_GOLD;
 
 #define X_DATUM 32
 #define Y_DATUM 20
-#define X_LENGTH 140
-#define Y_HEIGHT 70
-int X_TICK_SIZE = 7;
-int Y_TICK_SIZE = 7;
+#define X_LENGTH 200
+#define Y_HEIGHT 100
+int X_TICK_SIZE = 10;
+int Y_TICK_SIZE = 10;
 int NUM_X_TICKS = (X_LENGTH / X_TICK_SIZE) + 1;
 int NUM_Y_TICKS = (Y_HEIGHT / Y_TICK_SIZE) + 1;
 int NUM_DATA_POINTS = (X_LENGTH / X_STEP) + 1;
@@ -65,19 +65,18 @@ int getDataPoint(int sampleIndex, float alpha = 0.0421489, float omega = 0.15707
 
 void drawGrid(bool bufferFull = false, int start = 0, int end = 0);
 
-char userDefinedFunctionName[CHAR_BUFFER_SIZE] = "Distance to object (cm)";
-// "2t mod 50"
+char userDefinedFunctionName[CHAR_BUFFER_SIZE] = "2t mod 50";
 
 int getUserDefinedData(int sampleIndex) {
-  // Example function: mod 50
-  // return (2 * sampleIndex) % 50;
-  static bool sensorSetupDone = false;
+  return (2 * sampleIndex) % 50;
+  /* static bool sensorSetupDone = false;
   if (!sensorSetupDone) {
     setupUltrasonicSensor();
     sensorSetupDone = true;
   }
   pollUltrasonicSensor();
   return ultrasonicDistanceNearestCm;
+  */
 }
 
 void setup() {
@@ -102,18 +101,18 @@ void setup() {
 void loop() {
   static unsigned long lastUpdateTime = millis();
   static unsigned long sampleIndex = 0;
+  static unsigned long startSampleIndex = sampleIndex - NUM_DATA_POINTS + 1;
   static int prevX = -1, prevY = -1;
   static int runningMax = 0, runningSum = 0;
   if (millis() - lastUpdateTime >= delayMillis) {
-    unsigned long firstSample = sampleIndex - NUM_DATA_POINTS + 1;
-    int startIndex = firstSample % NUM_DATA_POINTS;
-    int writeIndex = sampleIndex % (NUM_DATA_POINTS); // end-point inclusive
     int rawData = getDataPoint(sampleIndex);
-    if (rawData > maxY) { // increase maxY if necessary
+    if (rawData > maxY) { // Increase maxY if necessary
       maxY = (rawData / AUTO_STEP + 1)* AUTO_STEP;
       drawGrid();
     }
-    buffer[writeIndex] = rawData; // store in buffer, overwrites old value
+    int startIndex = startSampleIndex % NUM_DATA_POINTS;
+    int writeIndex = sampleIndex % NUM_DATA_POINTS;
+    buffer[writeIndex] = rawData; // Store in buffer, overwrites old value
     runningSum += rawData;
     if (rawData > runningMax) runningMax = rawData;
     currLeft = !digitalRead(LEFT_BUTTON);
@@ -149,13 +148,14 @@ void loop() {
         tft.drawPixel(currX, currY, DATA_COLOUR);
       }
     } else {
-      drawGrid(true, startIndex, writeIndex);
+      drawGrid(true, startIndex, writeIndex); // Note that this is end-point inclusive
     }
     prevX = currX;
     prevY = currY;
     prevLeft = currLeft;
     prevRight = currRight;
     sampleIndex++;
+    startSampleIndex++;
     lastUpdateTime = millis();
   }
 }
