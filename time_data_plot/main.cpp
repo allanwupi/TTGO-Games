@@ -54,6 +54,14 @@ enum function {
   AMPLITUDE_MODULATION,
   CUSTOM_FUNCTION
 };
+char functionNames[6][CHAR_BUFFER_SIZE] = {
+  "0. ANALOG READ",
+  "1. PURE SINE WAVE",
+  "2. COSINE + SINE",
+  "3. FREQUENCY MODULATED WAVE",
+  "4. AMPLITUDE MODULATED WAVE",
+  "5. USER DEFINED FUNCTION"
+};
 function functionSelect = ANALOG_READ;
 int buffer[MAX_BUFFER_CAPACITY];
 char functionName[CHAR_BUFFER_SIZE];
@@ -97,7 +105,6 @@ void setup() {
     tft.drawNumber(0, X_DATUM-5, Y_DATUM-3 + Y_HEIGHT/2);
     tft.drawNumber(-funcAmplitude, X_DATUM-5, Y_DATUM-3 + Y_HEIGHT);
   }
-  // Serial.begin(115200);
 }
 
 void loop() {
@@ -114,19 +121,18 @@ void loop() {
     }
     int startIndex = startSampleIndex % NUM_DATA_POINTS;
     int writeIndex = sampleIndex % NUM_DATA_POINTS;
-    buffer[writeIndex] = rawData; // Store in buffer, overwrites old value
+    buffer[writeIndex] = rawData; // Store raw value in buffer, overwrites old value
     runningSum += rawData;
     if (rawData > runningMax) runningMax = rawData;
     currLeft = !digitalRead(LEFT_BUTTON);
     currRight = !digitalRead(RIGHT_BUTTON);
-    if (prevLeft && !currLeft) { // Clear background and turn off scrolling (TODO)
+    if (prevLeft && !currLeft) { // Press left button to turn off scrolling and refresh grid
       drawGrid();
       enableScrolling = false;
-    }
-    if (prevRight && !currRight) { // Turn on scrolling (this works already)
+    } else if (prevRight && !currRight) { // Press right button to enable scrolling
       enableScrolling = true;
     }
-    if (sampleIndex > 0 && writeIndex == 0) {
+    if (sampleIndex > 0 && writeIndex == 0) { // Refresh grid when looping back to start of buffer
       if (autoRanging) { // Auto-ranging: take double the average or 1.5x the running maximum 
         int doubleAverage = constrain(2 * (runningSum / NUM_DATA_POINTS), 0, 4095) / AUTO_STEP *  AUTO_STEP;
         maxY = constrain((3 * runningMax / 2), 0, 4095) / AUTO_STEP * AUTO_STEP;
@@ -163,8 +169,7 @@ void loop() {
 }
 
 void userSelectFunction() {
-  int prevChoice = -1;
-  int currChoice = 0;
+  int prevChoice = -1, currChoice = 0;
   bool startPlotting = false;
   tft.setTextFont(2);
   tft.drawString("SELECT FUNCTION", X_DATUM, Y_DATUM-5);
@@ -174,48 +179,33 @@ void userSelectFunction() {
     if (prevRight && !currRight) currChoice = (currChoice + 1) % 6;
     if (prevChoice != currChoice) {
       tft.setTextColor(GRIDLINES_COLOUR, BACKGROUND_COLOUR);
-      tft.drawString("0. ANALOG READ", X_DATUM, Y_DATUM+20);
-      tft.drawString("1. PURE SINE WAVE", X_DATUM, Y_DATUM+40);
-      tft.drawString("2. COSINE + SINE", X_DATUM, Y_DATUM+60);
-      tft.drawString("3. FREQUENCY MODULATED WAVE", X_DATUM, Y_DATUM+80);
-      tft.drawString("4. AMPLITUDE MODULATED WAVE", X_DATUM, Y_DATUM+100);
-      tft.drawString("5. USER DEFINED FUNCTION", X_DATUM, Y_DATUM+120);
+      for (int i = 0; i < 6; i++) {
+        tft.drawString(functionNames[i], X_DATUM, Y_DATUM+20*(i+1));
+      }
     }
     tft.setTextColor(DATA_COLOUR, BACKGROUND_COLOUR);
+    tft.drawString(functionNames[currChoice], X_DATUM, Y_DATUM+20*(currChoice+1));
     switch (currChoice) {
     case (0):
-      functionSelect = ANALOG_READ;
-      tft.drawString("0. ANALOG READ", X_DATUM, Y_DATUM+20);
-      break;
+      functionSelect = ANALOG_READ; break;
     case (1):
-      functionSelect = PURE_SINUSOID;
-      tft.drawString("1. PURE SINE WAVE", X_DATUM, Y_DATUM+40);
-      break;
+      functionSelect = PURE_SINUSOID; break;
     case (2):
-      functionSelect = COSINE_SINE_SUM;
-      tft.drawString("2. COSINE + SINE", X_DATUM, Y_DATUM+60);
-      break;
+      functionSelect = COSINE_SINE_SUM; break;
     case (3):
-      functionSelect = FREQUENCY_MODULATION;
-      tft.drawString("3. FREQUENCY MODULATED WAVE", X_DATUM, Y_DATUM+80);
-      break;
+      functionSelect = FREQUENCY_MODULATION; break;
     case (4):
-      functionSelect = AMPLITUDE_MODULATION;
-      tft.drawString("4. AMPLITUDE MODULATED WAVE", X_DATUM, Y_DATUM+100);
-      break;
+      functionSelect = AMPLITUDE_MODULATION; break;
     case (5):
-      functionSelect = CUSTOM_FUNCTION;
-      tft.drawString("5. USER DEFINED FUNCTION", X_DATUM, Y_DATUM+120);
-      break;
+      functionSelect = CUSTOM_FUNCTION; break;
     }
     tft.setTextColor(AXIS_COLOUR, BACKGROUND_COLOUR);
     prevChoice = currChoice;
     if (prevLeft && !currLeft) {
       if (functionSelect != ANALOG_READ && functionSelect != CUSTOM_FUNCTION)
         autoRanging = false;
-      if (functionSelect == COSINE_SINE_SUM) {
+      if (functionSelect == COSINE_SINE_SUM)
         funcAmplitude = 2;
-      }
       startPlotting = true;
     }
     prevLeft = currLeft;
