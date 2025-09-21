@@ -3,12 +3,14 @@
 // 20 September 2025
 #include <Arduino.h>
 
+// By default the ultrasonic sensor uses pins 1 and 2
 int ULTRASONIC_TRIGGER = 1;
 int ULTRASONIC_ECHO = 2;
 
 // -1 is a sentinel value meaning no enemy found
 double ultrasonicDistanceCm = -1;
 int ultrasonicDistanceNearestCm = -1;
+
 // Set ultrasonicSerialEnable to 1 to enable printout to the serial monitor
 bool ultrasonicSerialEnable;
 
