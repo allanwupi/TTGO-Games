@@ -1,4 +1,4 @@
-// Time Plotter with Circular Buffer
+// Time Data Plot with Circular Buffer
 // Author: Allan Wu (23810308)
 // Date: 21 September 2025
 #include <Arduino.h>
@@ -12,7 +12,7 @@ int funcAmplitude = 1;
 bool autoRanging = true;
 bool enableScrolling = true;
 bool enableUserSelect = true;
-bool enableGridlines = true;
+bool enableGridlines = false;
 
 int AUTO_STEP = 20;
 int X_STEP = 4;
@@ -56,8 +56,8 @@ enum function {
 };
 char functionNames[6][CHAR_BUFFER_SIZE] = {
   "0. ANALOG READ",
-  "1. PURE SINE WAVE",
-  "2. COSINE + SINE",
+  "1. SINE FUNCTION",
+  "2. SUM OF SINUSOIDS",
   "3. FREQUENCY MODULATED WAVE",
   "4. AMPLITUDE MODULATED WAVE",
   "5. USER DEFINED FUNCTION"
@@ -127,9 +127,11 @@ void loop() {
     currLeft = !digitalRead(LEFT_BUTTON);
     currRight = !digitalRead(RIGHT_BUTTON);
     if (prevLeft && !currLeft) { // Press left button to turn off scrolling and refresh grid
+      enableGridlines = true;
       drawGrid();
       enableScrolling = false;
     } else if (prevRight && !currRight) { // Press right button to enable scrolling
+      enableGridlines = false;
       enableScrolling = true;
     }
     if (sampleIndex > 0 && writeIndex == 0) { // Refresh grid when looping back to start of buffer
@@ -172,7 +174,7 @@ void userSelectFunction() {
   int prevChoice = -1, currChoice = 0;
   bool startPlotting = false;
   tft.setTextFont(2);
-  tft.drawString("SELECT FUNCTION", X_DATUM, Y_DATUM-5);
+  tft.drawString("[ SELECT FUNCTION TO PLOT ]", X_DATUM, Y_DATUM-5);
   while (!startPlotting) {
     currLeft = !digitalRead(LEFT_BUTTON);
     currRight = !digitalRead(RIGHT_BUTTON);
