@@ -15,7 +15,7 @@ int funcAmplitude = 1; // Vertical bound for symmetrical functions e.g. sin(x)
 bool autoRanging = true;
 bool disableScrolling = true;
 
-const int AUTO_RANGE_STEP = 20;
+const int AUTO_STEP = 20;
 
 // Define spacing between data points
 const int X_STEP = 3;
@@ -113,8 +113,8 @@ void loop() {
 
   if (sampleIndex > 0 && writeIndex == 0) {
     if (autoRanging) { // Auto-ranging: take double the average or 1.5x the running maximum 
-      int doubleAverage = constrain(2 * (runningSum / NUM_DATA_POINTS), 0, 4095) / AUTO_RANGE_STEP * AUTO_RANGE_STEP;
-      maxY = constrain((3 * runningMax / 2), 0, 4095) / AUTO_RANGE_STEP * AUTO_RANGE_STEP;
+      int doubleAverage = constrain(2 * (runningSum / NUM_DATA_POINTS) + AUTO_STEP/2, 0, 4095) / AUTO_STEP * AUTO_STEP;
+      maxY = constrain((3 * runningMax / 2), 0, 4095) / AUTO_STEP * AUTO_STEP;
       if (doubleAverage > maxY) maxY = doubleAverage;
     }
     if (disableScrolling) {
@@ -158,7 +158,7 @@ void userSelectFunction() {
   while (true) {
     currLeft = !digitalRead(LEFT_BUTTON);
     currRight = !digitalRead(RIGHT_BUTTON);
-    if (prevRight && !currRight) currChoice = (currChoice + 1) % 5;
+    if (prevRight && !currRight) currChoice = (currChoice + 1) % 6;
     if (prevChoice != currChoice) {
       tft.setTextColor(GRIDLINES_COLOUR, BACKGROUND_COLOUR);
       tft.drawString("0. ANALOG READ", X_DATUM, Y_DATUM+20);
