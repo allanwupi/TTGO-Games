@@ -112,8 +112,10 @@ void loop() {
   }
 
   if (sampleIndex > 0 && writeIndex == 0) {
-    if (autoRanging) {
-      maxY = constrain(runningMax + runningSum / NUM_DATA_POINTS, 0, 4095) / AUTO_RANGE_STEP * AUTO_RANGE_STEP;
+    if (autoRanging) { // Auto-ranging: take double the average or 1.5x the running maximum 
+      int doubleAverage = constrain(2 * (runningSum / NUM_DATA_POINTS), 0, 4095) / AUTO_RANGE_STEP * AUTO_RANGE_STEP;
+      maxY = constrain((3 * runningMax / 2), 0, 4095) / AUTO_RANGE_STEP * AUTO_RANGE_STEP;
+      if (doubleAverage > maxY) maxY = doubleAverage;
     }
     if (disableScrolling) {
       drawGrid();
