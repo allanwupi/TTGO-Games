@@ -25,7 +25,7 @@ enum function {
   COSINE_SINE_SUM,
   FREQUENCY_MODULATION,
   AMPLITUDE_MODULATION,
-  ULTRASONIC_SIGNAL
+  ULTRASONIC_SENSOR
 };
 function functionSelect = ANALOG_READ;
 char functionName[50];
@@ -74,6 +74,11 @@ void setup() {
   get_data_point(0); // sets function name
   tft.setTextDatum(TR_DATUM);
   drawGrid();
+  if (!auto_ranging) { // override labels for math functions
+    tft.drawNumber(1, X_DATUM-8, Y_DATUM-3);
+    tft.drawNumber(0, X_DATUM-8, Y_DATUM-3 + Y_HEIGHT/2);
+    tft.drawNumber(-1, X_DATUM-8, Y_DATUM-3 + Y_HEIGHT);
+  }
 }
 
 void loop() {
@@ -129,7 +134,6 @@ void loop() {
 
 void user_select() {
   int prevLeft = 0, prevRight = 0, currLeft, currRight;
-  unsigned long lastUpdateTime = millis();
   int prev_choice = -1;
   int user_choice = 0;
   tft.setTextFont(2);
@@ -137,10 +141,9 @@ void user_select() {
   while (true) {
     currLeft = !digitalRead(LEFT_BUTTON);
     currRight = !digitalRead(RIGHT_BUTTON);
-    if (prevRight && !currRight && millis() - lastUpdateTime > delayMillis) {
+    if (prevRight && !currRight) {
       if (user_choice < 5) user_choice++;
       else user_choice = 0;
-      lastUpdateTime = millis();
     }
     if (prev_choice != user_choice) {
       tft.setTextColor(GRIDLINES_COLOUR, BACKGROUND_COLOUR);
@@ -162,7 +165,7 @@ void user_select() {
       tft.drawString("1. PURE SINE WAVE", X_DATUM, Y_DATUM+50);
       break;
     case (2):
-      functionSelect = COSINE_SINE_SUM; 
+      functionSelect = COSINE_SINE_SUM;
       tft.drawString("2. COSINE + SINE", X_DATUM, Y_DATUM+70);
       break;
     case (3):
@@ -174,13 +177,15 @@ void user_select() {
       tft.drawString("4. AMPLITUDE MODULATED WAVE", X_DATUM, Y_DATUM+110);
       break;
     case (5):
-      functionSelect = ULTRASONIC_SIGNAL;
+      functionSelect = ULTRASONIC_SENSOR;
       tft.drawString("5. ULTRASONIC SENSOR", X_DATUM, Y_DATUM+130);
       break;
     }
     tft.setTextColor(AXIS_COLOUR, BACKGROUND_COLOUR);
     prev_choice = user_choice;
-    if (prevLeft && !currLeft && millis() - lastUpdateTime > delayMillis) {
+    if (prevLeft && !currLeft) {
+      if (functionSelect != ANALOG_READ && functionSelect != ULTRASONIC_SENSOR)
+        auto_ranging = false;
       break;
     }
     prevLeft = currLeft;
@@ -198,22 +203,18 @@ int get_data_point(int sample_index, float alpha, float omega) {
     sprintf(functionName, "Reading Analog Pin %d", ANALOG_INPUT_PIN);
     return analogRead(ANALOG_INPUT_PIN);
   case (PURE_SINUSOID):
-    if (auto_ranging) auto_ranging = false;
-    sprintf(functionName, "sin(%.2ft)", omega_act);
+    sprintf(functionName, "sin(%.4ft)", omega_act);
     return max_y_value/2 * (1 + sin(sample_index * omega));
   case (COSINE_SINE_SUM):
-    if (auto_ranging) auto_ranging = false;
     sprintf(functionName, "cos(%.2ft)+sin(%.2ft)", alpha_act, 2*omega_act);
     return max_y_value/4 * (2 + cos(sample_index * alpha) + sin(sample_index * 2*omega));
   case (FREQUENCY_MODULATION):
-    if (auto_ranging) auto_ranging = false;
     sprintf(functionName, "cos(%.2ft+%.1fsin(%.2ft))", omega_act, 10*omega_act, 16*alpha_act);
     return max_y_value/2 * (1 + cos(sample_index * omega + 10 * omega * sin(sample_index * 16*alpha)));
   case (AMPLITUDE_MODULATION):
-    if (auto_ranging) auto_ranging = false;
     sprintf(functionName, "cos(%.2ft)sin(%.2ft)", alpha_act, 4*omega_act);
     return max_y_value/2 * (1 + cos(sample_index * alpha) * sin(sample_index * 4*omega));
-  case (ULTRASONIC_SIGNAL):
+  case (ULTRASONIC_SENSOR):
     sprintf(functionName, "Distance to Object (cm)");
     pollUltrasonicSensor();
     return ultrasonicDistanceNearestCm;
@@ -234,7 +235,7 @@ void drawGrid(bool buffer_full, int start, int end) {
   tft.drawRect(X_DATUM-2, Y_DATUM-2, X_LENGTH+4, Y_HEIGHT+4, AXIS_COLOUR); // with padding
   tft.drawString(functionName, X_DATUM + X_LENGTH-8, Y_DATUM + 7); // with padding
 
-  if (old_max_y_value != max_y_value) {
+  if (auto_ranging && old_max_y_value != max_y_value) {
     tft.fillRect(0, 0, X_DATUM-8, 170, BACKGROUND_COLOUR);
     tft.drawNumber(max_y_value, X_DATUM-8, Y_DATUM-3); // labels with padding (right indent)
     tft.drawNumber(max_y_value/2, X_DATUM-8, Y_DATUM-3 + Y_HEIGHT/2);
