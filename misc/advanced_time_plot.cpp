@@ -11,6 +11,7 @@ int delayMillis = 100;
 // Initial estimate of maximum analogue reading
 int maxY = 100;
 int oldMaxY = 0;
+int funcAmplitude = 1; // Vertical bound for symmetrical functions e.g. sin(x)
 bool autoRanging = true;
 bool disableScrolling = true;
 
@@ -79,9 +80,9 @@ void setup() {
   tft.setTextDatum(TR_DATUM);
   drawGrid();
   if (!autoRanging) { // Override labels for math functions
-    tft.drawNumber(1, X_DATUM-8, Y_DATUM-3);
+    tft.drawNumber(+funcAmplitude, X_DATUM-8, Y_DATUM-3);
     tft.drawNumber(0, X_DATUM-8, Y_DATUM-3 + Y_HEIGHT/2);
-    tft.drawNumber(-1, X_DATUM-8, Y_DATUM-3 + Y_HEIGHT);
+    tft.drawNumber(-funcAmplitude, X_DATUM-8, Y_DATUM-3 + Y_HEIGHT);
   }
 }
 
@@ -102,7 +103,7 @@ void loop() {
   currLeft = !digitalRead(LEFT_BUTTON);
   currRight = !digitalRead(RIGHT_BUTTON);
 
-  if (prevLeft && !currLeft) { // Turn off scrolling (TODO)
+  if (prevLeft && !currLeft) { // Clear background and turn off scrolling (TODO)
     drawGrid();
     disableScrolling = true;
   }
@@ -197,6 +198,9 @@ void userSelectFunction() {
     if (prevLeft && !currLeft) {
       if (functionSelect != ANALOG_READ && functionSelect != ULTRASONIC_SENSOR)
         autoRanging = false;
+      if (functionSelect == COSINE_SINE_SUM) {
+        funcAmplitude = 2;
+      }
       break;
     }
     prevLeft = currLeft;
