@@ -3,7 +3,7 @@
 // Date: 21 September 2025
 #include <Arduino.h>
 #include <TFT_eSPI.h>
-// #include "ultrasonic.h"
+#include "ultrasonic.h"
 
 // Set update speed (don't set too fast or the TTGO will overheat)
 int delayMillis = 100;
@@ -65,21 +65,19 @@ int getDataPoint(int sampleIndex, float alpha = 0.0421489, float omega = 0.15707
 
 void drawGrid(bool bufferFull = false, int start = 0, int end = 0);
 
-char userDefinedFunctionName[CHAR_BUFFER_SIZE] = "2t mod 50";
+char userDefinedFunctionName[CHAR_BUFFER_SIZE] = "Distance to object (cm)";
+// "2t mod 50"
 
 int getUserDefinedData(int sampleIndex) {
   // Example function: mod 50
-  return (2 * sampleIndex) % 50;
-  /*
+  // return (2 * sampleIndex) % 50;
   static bool sensorSetupDone = false;
   if (!sensorSetupDone) {
-    userDefinedFunctionName = "Distance in cm";
-    setupUltrasonicSensor;
+    setupUltrasonicSensor();
     sensorSetupDone = true;
   }
   pollUltrasonicSensor();
   return ultrasonicDistanceNearestCm;
-    */
 }
 
 void setup() {
