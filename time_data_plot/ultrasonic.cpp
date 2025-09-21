@@ -17,7 +17,7 @@ bool ultrasonicSerialEnable;
 int ultrasonicTimeoutMicroseconds = 15000;
 
 // Time to wait before running the loop again, note that maximum polling rate is 50 Hz => 20,000 us delay between reads
-// Not currently used
+// (not currently used)
 int pollDelayMicroseconds = 50000;
 
 void setupUltrasonicSensor(int triggerPin, int echoPin, int timeoutMicroseconds, bool serialEnable) {
