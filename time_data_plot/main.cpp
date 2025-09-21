@@ -3,7 +3,7 @@
 // Date: 21 September 2025
 #include <Arduino.h>
 #include <TFT_eSPI.h>
-// #include "ultrasonic.h"
+#include "ultrasonic.h"
 
 // Set update speed (don't set too fast or the TTGO will overheat)
 int delayMillis = 100;
@@ -15,7 +15,7 @@ bool enableUserSelect = true;
 bool enableGridlines = true;
 
 int AUTO_STEP = 20;
-int X_STEP = 4;
+int X_STEP = 2;
 int MIN_Y_RANGE = 100;
 
 int maxY = MIN_Y_RANGE;
@@ -33,10 +33,10 @@ uint16_t DATA_COLOUR = TFT_GOLD;
 
 #define X_DATUM 32
 #define Y_DATUM 20
-#define X_LENGTH 280
-#define Y_HEIGHT 140
-int X_TICK_SIZE = 14;
-int Y_TICK_SIZE = 14;
+#define X_LENGTH 140
+#define Y_HEIGHT 70
+int X_TICK_SIZE = 7;
+int Y_TICK_SIZE = 7;
 int NUM_X_TICKS = (X_LENGTH / X_TICK_SIZE) + 1;
 int NUM_Y_TICKS = (Y_HEIGHT / Y_TICK_SIZE) + 1;
 int NUM_DATA_POINTS = (X_LENGTH / X_STEP) + 1;
@@ -65,18 +65,19 @@ int getDataPoint(int sampleIndex, float alpha = 0.0421489, float omega = 0.15707
 
 void drawGrid(bool bufferFull = false, int start = 0, int end = 0);
 
-char userDefinedFunctionName[CHAR_BUFFER_SIZE] = "2t mod 50";
-// "Distance to object (cm)";
+char userDefinedFunctionName[CHAR_BUFFER_SIZE] = "Distance to object (cm)";
+// "2t mod 50"
 
 int getUserDefinedData(int sampleIndex) {
-  return (2 * sampleIndex) % 50;
-  /* static bool sensorSetupDone = false;
+  // Example function: mod 50
+  // return (2 * sampleIndex) % 50;
+  static bool sensorSetupDone = false;
   if (!sensorSetupDone) {
     setupUltrasonicSensor();
     sensorSetupDone = true;
   }
   pollUltrasonicSensor();
-  return ultrasonicDistanceNearestCm; */
+  return ultrasonicDistanceNearestCm;
 }
 
 void setup() {
@@ -95,6 +96,7 @@ void setup() {
     tft.drawNumber(0, X_DATUM-5, Y_DATUM-3 + Y_HEIGHT/2);
     tft.drawNumber(-funcAmplitude, X_DATUM-5, Y_DATUM-3 + Y_HEIGHT);
   }
+  // Serial.begin(115200);
 }
 
 void loop() {
@@ -107,7 +109,10 @@ void loop() {
     int startIndex = firstSample % NUM_DATA_POINTS;
     int writeIndex = sampleIndex % (NUM_DATA_POINTS); // end-point inclusive
     int rawData = getDataPoint(sampleIndex);
-    if (rawData > maxY) maxY = (rawData / AUTO_STEP + 1)* AUTO_STEP; // increase maxY if necessary
+    if (rawData > maxY) { // increase maxY if necessary
+      maxY = (rawData / AUTO_STEP + 1)* AUTO_STEP;
+      drawGrid();
+    }
     buffer[writeIndex] = rawData; // store in buffer, overwrites old value
     runningSum += rawData;
     if (rawData > runningMax) runningMax = rawData;
@@ -122,7 +127,7 @@ void loop() {
     }
     if (sampleIndex > 0 && writeIndex == 0) {
       if (autoRanging) { // Auto-ranging: take double the average or 1.5x the running maximum 
-        int doubleAverage = constrain(2 * (runningSum / NUM_DATA_POINTS), 0, 4095) / AUTO_STEP * AUTO_STEP;
+        int doubleAverage = constrain(2 * (runningSum / NUM_DATA_POINTS), 0, 4095) / AUTO_STEP *  AUTO_STEP;
         maxY = constrain((3 * runningMax / 2), 0, 4095) / AUTO_STEP * AUTO_STEP;
         if (doubleAverage > maxY) maxY = doubleAverage;
         if (maxY < MIN_Y_RANGE) maxY = MIN_Y_RANGE;
