@@ -3,7 +3,7 @@
 // Date: 21 September 2025
 #include <Arduino.h>
 #include <TFT_eSPI.h>
-// #include "ultrasonic.h"
+#include "ultrasonic.h"
 
 // Set update speed (don't set too fast or the TTGO will overheat)
 int delayMillis = 100;
@@ -15,8 +15,11 @@ bool enableUserSelect = true;
 bool enableGridlines = true;
 
 int AUTO_STEP = 20;
-int X_STEP = 5;
+int X_STEP = 4;
 int MIN_Y_RANGE = 100;
+
+const float ALPHA = 0.0421489;
+const float OMEGA = 0.1570796;
 
 int maxY = MIN_Y_RANGE;
 int oldMaxY = 0;
@@ -33,10 +36,10 @@ uint16_t DATA_COLOUR = TFT_GOLD;
 
 #define X_DATUM 32
 #define Y_DATUM 20
-#define X_LENGTH 200
-#define Y_HEIGHT 100
-int X_TICK_SIZE = 10;
-int Y_TICK_SIZE = 10;
+#define X_LENGTH 280
+#define Y_HEIGHT 140
+int X_TICK_SIZE = 14;
+int Y_TICK_SIZE = 14;
 int NUM_X_TICKS = (X_LENGTH / X_TICK_SIZE) + 1;
 int NUM_Y_TICKS = (Y_HEIGHT / Y_TICK_SIZE) + 1;
 int NUM_DATA_POINTS = (X_LENGTH / X_STEP) + 1;
@@ -59,24 +62,23 @@ TFT_eSPI tft = TFT_eSPI(); // (320 x 170)
 
 void userSelectFunction();
 
-int getUserDefinedData(int sampleIndex);
+int getCustomData(int sampleIndex);
 
-int getDataPoint(int sampleIndex, float alpha = 0.0421489, float omega = 0.1570796, int (*funcPtr)(int)=getUserDefinedData);
+int getDataPoint(int sampleIndex, float alpha = ALPHA, float omega = OMEGA, int (*op)(int)=getCustomData);
 
 void drawGrid(bool bufferFull = false, int start = 0, int end = 0);
 
-char userDefinedFunctionName[CHAR_BUFFER_SIZE] = "2t mod 50";
+char customFunctionName[CHAR_BUFFER_SIZE] = "Distance to object (cm)";
 
-int getUserDefinedData(int sampleIndex) {
-  return (2 * sampleIndex) % 50;
-  /* static bool sensorSetupDone = false;
+int getCustomData(int sampleIndex) {
+  // return (2 * sampleIndex) % 50;
+  static bool sensorSetupDone = false;
   if (!sensorSetupDone) {
     setupUltrasonicSensor();
     sensorSetupDone = true;
   }
   pollUltrasonicSensor();
   return ultrasonicDistanceNearestCm;
-  */
 }
 
 void setup() {
@@ -223,7 +225,7 @@ void userSelectFunction() {
   tft.setTextFont(1);
 }
 
-int getDataPoint(int sampleIndex, float alpha, float omega, int (*funcPtr)(int)) {
+int getDataPoint(int sampleIndex, float alpha, float omega, int (*op)(int)) {
   float omegaAct = 1000 * omega / delayMillis;
   float alphaAct = 1000 * alpha / delayMillis;
   switch (functionSelect) {
@@ -243,8 +245,8 @@ int getDataPoint(int sampleIndex, float alpha, float omega, int (*funcPtr)(int))
     sprintf(functionName, "cos(%.2ft)sin(%.2ft)", 1.5*alphaAct, 5*omegaAct);
     return maxY/2 * (1 + cos(sampleIndex * 1.5*alpha) * sin(sampleIndex * 5*omega));
   case (CUSTOM_FUNCTION):
-    sprintf(functionName, userDefinedFunctionName);
-    return funcPtr(sampleIndex);
+    sprintf(functionName, customFunctionName);
+    return op(sampleIndex);
   default:
     return 0;
   }
