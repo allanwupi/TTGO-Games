@@ -57,7 +57,7 @@ int buffer[NUM_DATA_POINTS];
 
 void user_select();
 
-int get_data_point(int sample_index, float omega = 0.31416, float alpha = 0.012);
+int get_data_point(int sample_index, float alpha = 0.03333, float omega = 0.31416);
 
 void drawGrid(bool buffer_full = false, int first_sample_index = 0, int last_sample_index = 0);
 
@@ -77,6 +77,8 @@ void setup() {
 }
 
 void loop() {
+  static int actualDelay;
+  static unsigned long lastUpdateTime = millis();
   static unsigned long sample_index = 0;
   static int running_max = 0;
   static int running_sum = 0;
@@ -120,7 +122,9 @@ void loop() {
   prev_y = curr_y;
   sample_index++;
 
-  delay(delayMillis);
+  actualDelay = constrain(delayMillis - (millis()-lastUpdateTime), 0, delayMillis);
+  lastUpdateTime = millis();
+  delay(actualDelay);
 }
 
 void user_select() {
@@ -186,7 +190,7 @@ void user_select() {
   tft.setTextFont(1);
 }
 
-int get_data_point(int sample_index, float omega, float alpha) {
+int get_data_point(int sample_index, float alpha, float omega) {
   float omega_t = 1000 * omega / delayMillis;
   float alpha_t = 1000 * alpha / delayMillis;
   switch (functionSelect) {
