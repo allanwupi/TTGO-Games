@@ -6,17 +6,17 @@
 #include "ultrasonic.h"
 
 // Set update speed (don't set too fast or the TTGO will overheat)
-int delayMillis = 80; 
+int delayMillis = 200; 
 
 // Initial estimate of maximum analogue reading
-int max_y_value = 200;
+int max_y_value = 100;
 int old_max_y_value = 0;
 bool auto_y_range = false;
 
 const int AUTO_Y_STEP = 20;
 
 // Define spacing between data points
-const int X_STEP = 2;
+const int X_STEP = 5;
 
 bool enable_user_select = true;
 enum function {
@@ -57,7 +57,7 @@ int buffer[NUM_DATA_POINTS];
 
 void user_select();
 
-int get_data_point(int sample_index, float omega = 0.12, float alpha = 0.008);
+int get_data_point(int sample_index, float omega = 0.31416, float alpha = 0.012);
 
 void drawGrid(bool buffer_full = false, int first_sample_index = 0, int last_sample_index = 0);
 
@@ -187,25 +187,27 @@ void user_select() {
 }
 
 int get_data_point(int sample_index, float omega, float alpha) {
+  float omega_t = 1000 * omega / delayMillis;
+  float alpha_t = 1000 * alpha / delayMillis;
   switch (functionSelect) {
   case (ANALOG_READ):
     if (!auto_y_range) auto_y_range = true;
     sprintf(functionName, "Reading Analog Pin %d", ANALOG_INPUT_PIN);
     return analogRead(ANALOG_INPUT_PIN);
   case (SINE):
-    sprintf(functionName, "sin(%.3ft)", omega);
+    sprintf(functionName, "sin(%.4ft)", omega_t);
     return max_y_value/2 * (1 + sin(sample_index * omega));
   case (DECAYING_SINE):
-    sprintf(functionName, "exp(-%.3ft)sin(%.3ft)", alpha, omega);
+    sprintf(functionName, "exp(-%.4ft)sin(%.4ft)", alpha_t, omega_t);
     return max_y_value/2 * (1 + pow(2.71828f, -sample_index * alpha) * sin(sample_index * omega));
   case (COSINE_SINE_SUM):
-    sprintf(functionName, "cos(%.3ft)+sin(%.3ft)", alpha, omega);
+    sprintf(functionName, "cos(%.4ft)+sin(%.4ft)", alpha_t, omega_t);
     return max_y_value/4 * (2 + cos(sample_index * alpha) + sin(sample_index * omega));
   case (COSINE_SINE_PRODUCT):
-    sprintf(functionName, "cos(%.3ft)sin(%.3ft)", alpha, omega);
+    sprintf(functionName, "cos(%.4ft)sin(%.4ft)", alpha_t, omega_t);
     return max_y_value/2 * (1 + cos(sample_index * alpha) * sin(sample_index * omega));
   case (ULTRASONIC_SIGNAL):
-    sprintf(functionName, "Ultrasonic Sensor Data");
+    sprintf(functionName, "Distance to Object (cm)");
     pollUltrasonicSensor();
     return ultrasonicDistanceNearestCm;
   default:
