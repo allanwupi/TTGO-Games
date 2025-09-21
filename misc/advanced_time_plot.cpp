@@ -18,7 +18,7 @@ bool disableScrolling = true;
 const int AUTO_STEP = 20;
 
 // Define spacing between data points
-const int X_STEP = 3;
+const int X_STEP = 4;
 
 bool enableUserSelect = true;
 enum function {
@@ -45,12 +45,12 @@ bool enableGridlines = true;
 #define AXIS_COLOUR TFT_SILVER
 #define DATA_COLOUR TFT_GOLD
 
-#define X_DATUM 35
+#define X_DATUM 28
 #define Y_DATUM 20
-#define X_LENGTH 270
+#define X_LENGTH 280
 #define Y_HEIGHT 140
 
-const int X_TICK_SIZE = 15;
+const int X_TICK_SIZE = 20;
 const int Y_TICK_SIZE = 14;
 const int NUM_X_TICKS = (X_LENGTH / X_TICK_SIZE) + 1;
 const int NUM_Y_TICKS = (Y_HEIGHT / Y_TICK_SIZE) + 1;
@@ -60,7 +60,7 @@ int buffer[NUM_DATA_POINTS];
 
 void userSelectFunction();
 
-int getDataPoint(int sampleIndex, float alpha = 0.023333, float omega = 0.157059);
+int getDataPoint(int sampleIndex, float alpha = 0.0421489, float omega = 0.1570796);
 
 void drawGrid(bool bufferFull = false, int start = 0, int end = 0);
 
@@ -80,9 +80,9 @@ void setup() {
   tft.setTextDatum(TR_DATUM);
   drawGrid();
   if (!autoRanging) { // Override labels for math functions
-    tft.drawNumber(+funcAmplitude, X_DATUM-8, Y_DATUM-3);
-    tft.drawNumber(0, X_DATUM-8, Y_DATUM-3 + Y_HEIGHT/2);
-    tft.drawNumber(-funcAmplitude, X_DATUM-8, Y_DATUM-3 + Y_HEIGHT);
+    tft.drawNumber(+funcAmplitude, X_DATUM-5, Y_DATUM-3);
+    tft.drawNumber(0, X_DATUM-5, Y_DATUM-3 + Y_HEIGHT/2);
+    tft.drawNumber(-funcAmplitude, X_DATUM-5, Y_DATUM-3 + Y_HEIGHT);
   }
 }
 
@@ -226,11 +226,11 @@ int getDataPoint(int sampleIndex, float alpha, float omega) {
     sprintf(functionName, "cos(%.2ft)+sin(%.2ft)", alphaAct, 2*omegaAct);
     return maxY/4 * (2 + cos(sampleIndex * alpha) + sin(sampleIndex * 2*omega));
   case (FREQUENCY_MODULATION):
-    sprintf(functionName, "cos(%.2ft+%.1fsin(%.2ft))", omegaAct, 10*omegaAct, 16*alphaAct);
-    return maxY/2 * (1 + cos(sampleIndex * omega + 10 * omega * sin(sampleIndex * 16*alpha)));
+    sprintf(functionName, "cos(%.2ft+%.1fsin(%.2ft))", omegaAct, 10*omegaAct, 10*alphaAct);
+    return maxY/2 * (1 + cos(sampleIndex * omega + 10 * omega * sin(sampleIndex * 10*alpha)));
   case (AMPLITUDE_MODULATION):
-    sprintf(functionName, "cos(%.2ft)sin(%.2ft)", alphaAct, 4*omegaAct);
-    return maxY/2 * (1 + cos(sampleIndex * alpha) * sin(sampleIndex * 4*omega));
+    sprintf(functionName, "cos(%.2ft)sin(%.2ft)", 1.5*alphaAct, 5*omegaAct);
+    return maxY/2 * (1 + cos(sampleIndex * 1.5*alpha) * sin(sampleIndex * 5*omega));
   case (ULTRASONIC_SENSOR):
     sprintf(functionName, "Distance to Object (cm)");
     pollUltrasonicSensor();
@@ -252,10 +252,10 @@ void drawGrid(bool bufferFull, int start, int end) {
   tft.drawRect(X_DATUM-2, Y_DATUM-2, X_LENGTH+4, Y_HEIGHT+4, AXIS_COLOUR); // with padding
   // Update y-range if auto ranging enabled
   if (autoRanging && oldMaxY != maxY) {
-    tft.fillRect(0, 0, X_DATUM-8, 170, BACKGROUND_COLOUR);
-    tft.drawNumber(maxY, X_DATUM-8, Y_DATUM-3); // labels with padding (right indent)
-    tft.drawNumber(maxY/2, X_DATUM-8, Y_DATUM-3 + Y_HEIGHT/2);
-    tft.drawNumber(0, X_DATUM-8, Y_DATUM-3 + Y_HEIGHT);
+    tft.fillRect(0, 0, X_DATUM-5, 170, BACKGROUND_COLOUR);
+    tft.drawNumber(maxY, X_DATUM-5, Y_DATUM-3); // labels with padding (right indent)
+    tft.drawNumber(maxY/2, X_DATUM-5, Y_DATUM-3 + Y_HEIGHT/2);
+    tft.drawNumber(0, X_DATUM-5, Y_DATUM-3 + Y_HEIGHT);
     oldMaxY = maxY;
   }
   // Draw plot from buffer
