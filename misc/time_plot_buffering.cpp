@@ -43,12 +43,12 @@ bool draw_gridlines = true;
 #define DATA_COLOUR TFT_GOLD
 
 #define X_DATUM 35
-#define Y_DATUM 10
+#define Y_DATUM 20
 #define X_LENGTH 270
-#define Y_HEIGHT 150
+#define Y_HEIGHT 140
 
 const int X_TICK_SIZE = 15;
-const int Y_TICK_SIZE = 15;
+const int Y_TICK_SIZE = 14;
 const int NUM_X_TICKS = (X_LENGTH / X_TICK_SIZE) + 1;
 const int NUM_Y_TICKS = (Y_HEIGHT / Y_TICK_SIZE) + 1;
 const int NUM_DATA_POINTS = (X_LENGTH / X_STEP) + 1;
@@ -72,6 +72,8 @@ void setup() {
   setupUltrasonicSensor();
   if (enable_user_select) user_select();
   get_data_point(0); // sets function name
+  tft.setTextDatum(CC_DATUM);
+  tft.drawString(functionName, X_DATUM + (X_LENGTH / 2), 10);
   tft.setTextDatum(TR_DATUM);
   drawGrid();
   if (!auto_ranging) { // override labels for math functions
@@ -137,7 +139,7 @@ void user_select() {
   int prev_choice = -1;
   int user_choice = 0;
   tft.setTextFont(2);
-  tft.drawString("USER SELECT", X_DATUM, Y_DATUM+5);
+  tft.drawString("SELECT FUNCTION", X_DATUM, Y_DATUM-5);
   while (true) {
     currLeft = !digitalRead(LEFT_BUTTON);
     currRight = !digitalRead(RIGHT_BUTTON);
@@ -147,38 +149,38 @@ void user_select() {
     }
     if (prev_choice != user_choice) {
       tft.setTextColor(GRIDLINES_COLOUR, BACKGROUND_COLOUR);
-      tft.drawString("0. ANALOG SIGNAL", X_DATUM, Y_DATUM+30);
-      tft.drawString("1. PURE SINE WAVE", X_DATUM, Y_DATUM+50);
-      tft.drawString("2. COSINE + SINE", X_DATUM, Y_DATUM+70);
-      tft.drawString("3. FREQUENCY MODULATED WAVE", X_DATUM, Y_DATUM+90);
-      tft.drawString("4. AMPLITUDE MODULATED WAVE", X_DATUM, Y_DATUM+110);
-      tft.drawString("5. ULTRASONIC SENSOR", X_DATUM, Y_DATUM+130);
+      tft.drawString("0. ANALOG READ", X_DATUM, Y_DATUM+20);
+      tft.drawString("1. PURE SINE WAVE", X_DATUM, Y_DATUM+40);
+      tft.drawString("2. COSINE + SINE", X_DATUM, Y_DATUM+60);
+      tft.drawString("3. FREQUENCY MODULATED WAVE", X_DATUM, Y_DATUM+80);
+      tft.drawString("4. AMPLITUDE MODULATED WAVE", X_DATUM, Y_DATUM+100);
+      tft.drawString("5. ULTRASONIC SENSOR", X_DATUM, Y_DATUM+120);
     }
     tft.setTextColor(DATA_COLOUR, BACKGROUND_COLOUR);
     switch (user_choice) {
     case (0):
       functionSelect = ANALOG_READ;
-      tft.drawString("0. ANALOG SIGNAL", X_DATUM, Y_DATUM+30);
+      tft.drawString("0. ANALOG READ", X_DATUM, Y_DATUM+20);
       break;
     case (1):
       functionSelect = PURE_SINUSOID;
-      tft.drawString("1. PURE SINE WAVE", X_DATUM, Y_DATUM+50);
+      tft.drawString("1. PURE SINE WAVE", X_DATUM, Y_DATUM+40);
       break;
     case (2):
       functionSelect = COSINE_SINE_SUM;
-      tft.drawString("2. COSINE + SINE", X_DATUM, Y_DATUM+70);
+      tft.drawString("2. COSINE + SINE", X_DATUM, Y_DATUM+60);
       break;
     case (3):
       functionSelect = FREQUENCY_MODULATION;
-      tft.drawString("3. FREQUENCY MODULATED WAVE", X_DATUM, Y_DATUM+90);
+      tft.drawString("3. FREQUENCY MODULATED WAVE", X_DATUM, Y_DATUM+80);
       break;
     case (4):
       functionSelect = AMPLITUDE_MODULATION;
-      tft.drawString("4. AMPLITUDE MODULATED WAVE", X_DATUM, Y_DATUM+110);
+      tft.drawString("4. AMPLITUDE MODULATED WAVE", X_DATUM, Y_DATUM+100);
       break;
     case (5):
       functionSelect = ULTRASONIC_SENSOR;
-      tft.drawString("5. ULTRASONIC SENSOR", X_DATUM, Y_DATUM+130);
+      tft.drawString("5. ULTRASONIC SENSOR", X_DATUM, Y_DATUM+120);
       break;
     }
     tft.setTextColor(AXIS_COLOUR, BACKGROUND_COLOUR);
@@ -233,7 +235,6 @@ void drawGrid(bool buffer_full, int start, int end) {
       tft.drawFastHLine(X_DATUM, Y_DATUM + i*Y_TICK_SIZE, X_LENGTH, GRIDLINES_COLOUR);
   }
   tft.drawRect(X_DATUM-2, Y_DATUM-2, X_LENGTH+4, Y_HEIGHT+4, AXIS_COLOUR); // with padding
-  tft.drawString(functionName, X_DATUM + X_LENGTH-8, Y_DATUM + 7); // with padding
 
   if (auto_ranging && old_max_y_value != max_y_value) {
     tft.fillRect(0, 0, X_DATUM-8, 170, BACKGROUND_COLOUR);
