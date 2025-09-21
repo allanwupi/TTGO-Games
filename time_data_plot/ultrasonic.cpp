@@ -3,33 +3,37 @@
 // 20 September 2025
 #include <Arduino.h>
 
-const int ULTRASONIC_TRIGGER = 1;
-const int ULTRASONIC_ECHO = 2;
+int ULTRASONIC_TRIGGER = 1;
+int ULTRASONIC_ECHO = 2;
 
+// -1 is a sentinel value meaning no enemy found
+double ultrasonicDistanceCm = -1;
 int ultrasonicDistanceNearestCm = -1;
-
 // Set ultrasonicSerialEnable to 1 to enable printout to the serial monitor
-int ultrasonicSerialEnable;
+bool ultrasonicSerialEnable;
 
 // Set the maximum time we will wait for the echo pulse: this determines what is "OUT OF RANGE" for the sensor!
 // From my testing, 15000 us timeout limits the distane range to ~200 cm
-const static int timeoutMicroseconds = 15000;
+int ultrasonicTimeoutMicroseconds = 15000;
 
 // Time to wait before running the loop again, note that maximum polling rate is 50 Hz => 20,000 us delay between reads
-const static int pollDelayMicroseconds = 50000;
+// Not currently used
+int pollDelayMicroseconds = 50000;
 
-void setupUltrasonicSensor(bool outputEnable) {
+void setupUltrasonicSensor(int triggerPin, int echoPin, int timeoutMicroseconds, bool serialEnable) {
+    ULTRASONIC_TRIGGER = triggerPin;
+    ULTRASONIC_ECHO = echoPin;
     pinMode(ULTRASONIC_TRIGGER, OUTPUT);
     pinMode(ULTRASONIC_ECHO, INPUT);
-    if (outputEnable) {
+    ultrasonicTimeoutMicroseconds = timeoutMicroseconds;
+    if (serialEnable) {
 		Serial.begin(115200);
-		ultrasonicSerialEnable = 1;
+		ultrasonicSerialEnable = true;
 	}
 }
 
 int pollUltrasonicSensor() {
     static unsigned long durationMicroseconds;
-    static double distanceCm;
     static unsigned long startTimeMicroseconds, elapsedTimeMicroseconds = 0;
     static char distancePrintout[20];
 
@@ -42,14 +46,14 @@ int pollUltrasonicSensor() {
     startTimeMicroseconds = micros();
 
     // Call pulseIn() to read the echo pulse duration, if timeout occurs duration is instead set to 0
-    durationMicroseconds = pulseIn(ULTRASONIC_ECHO, HIGH, timeoutMicroseconds);
+    durationMicroseconds = pulseIn(ULTRASONIC_ECHO, HIGH, ultrasonicTimeoutMicroseconds);
 
     if (durationMicroseconds > 0) {
         // Calculation: distance = v*t = (343 m/s) * (100 c/m) * (time in us) * (0.000001 s / us) / 2
-        distanceCm = (durationMicroseconds * 0.0343) / 2;
-        snprintf(distancePrintout, 20, "%.2f cm     ", distanceCm);
+        ultrasonicDistanceCm = (durationMicroseconds * 0.0343) / 2;
+        snprintf(distancePrintout, 20, "%.2f cm     ", ultrasonicDistanceCm);
     } else {
-        distanceCm = -1; // Note that non-positive values indicate no enemy found
+        ultrasonicDistanceCm = -1; // Note that non-positive values indicate no enemy found
         snprintf(distancePrintout, 20, "??? cm     ");
     }
 
@@ -59,7 +63,7 @@ int pollUltrasonicSensor() {
         Serial.println(elapsedTimeMicroseconds);
         Serial.println(distancePrintout);
     }
-    ultrasonicDistanceNearestCm = (int)(distanceCm + 0.5); // Distance rounded to nearest cm
+    ultrasonicDistanceNearestCm = (int)(ultrasonicDistanceCm + 0.5); // Distance rounded to nearest cm
     
 	return elapsedTimeMicroseconds; // Return elapsed time
 
