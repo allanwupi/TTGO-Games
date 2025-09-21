@@ -127,12 +127,12 @@ void loop() {
     currLeft = !digitalRead(LEFT_BUTTON);
     currRight = !digitalRead(RIGHT_BUTTON);
     if (prevLeft && !currLeft) { // Press left button to turn off scrolling and refresh grid
-      enableGridlines = !enableGridlines;
+      if (enableScrolling) enableScrolling = false;
+      else enableGridlines = !enableGridlines;
       drawGrid();
-      enableScrolling = false;
     } else if (prevRight && !currRight) { // Press right button to enable scrolling
-      enableGridlines = !enableGridlines;
-      enableScrolling = true;
+      if (!enableScrolling) enableScrolling = true;
+      else enableGridlines = !enableGridlines;
     }
     if (sampleIndex > 0 && writeIndex == 0) { // Refresh grid when looping back to start of buffer
       if (autoRanging) { // Auto-ranging: take double the average or 1.5x the running maximum 
