@@ -16,7 +16,7 @@ bool enableGridlines = false;
 
 int AUTO_STEP = 20;
 int X_STEP = 4;
-int MIN_Y_RANGE = 100;
+int MIN_Y_RANGE = 40;
 
 const float ALPHA = 0.0421489;
 const float OMEGA = 0.1570796;
