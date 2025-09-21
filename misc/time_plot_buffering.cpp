@@ -11,9 +11,9 @@ int delayMillis = 200;
 // Initial estimate of maximum analogue reading
 int max_y_value = 100;
 int old_max_y_value = 0;
-bool auto_y_range = false;
+bool auto_ranging = false;
 
-const int AUTO_Y_STEP = 20;
+const int AUTO_RANGE_STEP = 20;
 
 // Define spacing between data points
 const int X_STEP = 5;
@@ -89,14 +89,14 @@ void loop() {
   int write_index = sample_index % (NUM_DATA_POINTS); // end-point inclusive
   int analog_value = get_data_point(sample_index);
   buffer[write_index] = analog_value; // store in buffer, overwrites old value
-  Serial.printf("%d: %d\n", sample_index, analog_value);
+  // Serial.printf("%d: %d\n", sample_index, analog_value);
 
   running_sum += analog_value;
   if (analog_value > running_max) running_max = analog_value;
 
   if (sample_index > 0 && write_index == 0) {
-    if (auto_y_range) {
-      max_y_value = constrain(running_max + running_sum / NUM_DATA_POINTS, 0, 4095) / AUTO_Y_STEP * AUTO_Y_STEP;
+    if (auto_ranging) {
+      max_y_value = constrain(running_max + running_sum / NUM_DATA_POINTS, 0, 4095) / AUTO_RANGE_STEP * AUTO_RANGE_STEP;
     }
     running_max = 0;
     running_sum = 0;
@@ -114,7 +114,7 @@ void loop() {
     else
       tft.drawPixel(curr_x, curr_y, DATA_COLOUR);
   } else { // buffer is full
-    Serial.printf("start: %3d, write: %3d\n", start_index, write_index);
+    // Serial.printf("start: %3d, write: %3d\n", start_index, write_index);
     drawGrid(true, start_index, write_index);
   }
 
@@ -123,8 +123,9 @@ void loop() {
   sample_index++;
 
   actualDelay = constrain(delayMillis - (millis()-lastUpdateTime), 0, delayMillis);
-  lastUpdateTime = millis();
+  // Serial.println(lastUpdateTime);
   delay(actualDelay);
+  lastUpdateTime = millis();
 }
 
 void user_select() {
@@ -195,7 +196,7 @@ int get_data_point(int sample_index, float alpha, float omega) {
   float alpha_t = 1000 * alpha / delayMillis;
   switch (functionSelect) {
   case (ANALOG_READ):
-    if (!auto_y_range) auto_y_range = true;
+    if (!auto_ranging) auto_ranging = true;
     sprintf(functionName, "Reading Analog Pin %d", ANALOG_INPUT_PIN);
     return analogRead(ANALOG_INPUT_PIN);
   case (SINE):
