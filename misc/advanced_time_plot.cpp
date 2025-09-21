@@ -6,13 +6,13 @@
 #include "ultrasonic.h"
 
 // Set update speed (don't set too fast or the TTGO will overheat)
-int delayMillis = 200; 
+int delayMillis = 100;
 
 // Initial estimate of maximum analogue reading
 int maxY = 100;
 int oldMaxY = 0;
 bool autoRanging = true;
-bool disableScrolling = false;
+bool disableScrolling = true;
 
 const int AUTO_RANGE_STEP = 20;
 
@@ -35,6 +35,7 @@ char functionName[50];
 #define ANALOG_INPUT_PIN 3
 #define LEFT_BUTTON 0
 #define RIGHT_BUTTON 14
+int prevLeft = 0, prevRight = 0, currLeft, currRight;
 
 // Configure plot colours
 bool enableGridlines = true;
@@ -72,7 +73,6 @@ void setup() {
   tft.fillScreen(BACKGROUND_COLOUR);
   setupUltrasonicSensor();
   if (enableUserSelect) userSelectFunction();
-  if (disableScrolling) delayMillis /= 2;
   getDataPoint(0); // Sets function name
   tft.setTextDatum(CC_DATUM);
   tft.drawString(functionName, X_DATUM + (X_LENGTH / 2), 10);
@@ -98,6 +98,17 @@ void loop() {
   static int prevX = -1, prevY = -1;
   runningSum += rawData;
   if (rawData > runningMax) runningMax = rawData;
+
+  currLeft = !digitalRead(LEFT_BUTTON);
+  currRight = !digitalRead(RIGHT_BUTTON);
+
+  if (prevLeft && !currLeft) { // Turn off scrolling (TODO)
+    drawGrid();
+    disableScrolling = true;
+  }
+  if (prevRight && !currRight) { // Turn on scrolling (this works already)
+    disableScrolling = false;
+  }
 
   if (sampleIndex > 0 && writeIndex == 0) {
     if (autoRanging) {
@@ -127,6 +138,8 @@ void loop() {
 
   prevX = currX;
   prevY = currY;
+  prevLeft = currLeft;
+  prevRight = currRight;
   sampleIndex++;
 
   int actualDelay = delayMillis - (millis()-lastUpdateTime);
@@ -135,7 +148,6 @@ void loop() {
 }
 
 void userSelectFunction() {
-  int prevLeft = 0, prevRight = 0, currLeft, currRight;
   int prevChoice = -1;
   int currChoice = 0;
   tft.setTextFont(2);
