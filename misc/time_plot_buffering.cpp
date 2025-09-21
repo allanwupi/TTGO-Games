@@ -16,15 +16,15 @@ bool auto_ranging = true;
 const int AUTO_RANGE_STEP = 20;
 
 // Define spacing between data points
-const int X_STEP = 5;
+const int X_STEP = 3;
 
 bool enable_user_select = true;
 enum function {
   ANALOG_READ,
-  SINE,
-  DECAYING_SINE,
+  PURE_SINUSOID,
   COSINE_SINE_SUM,
-  COSINE_SINE_PRODUCT,
+  FREQUENCY_MODULATION,
+  AMPLITUDE_MODULATION,
   ULTRASONIC_SIGNAL
 };
 function functionSelect = ANALOG_READ;
@@ -57,7 +57,7 @@ int buffer[NUM_DATA_POINTS];
 
 void user_select();
 
-int get_data_point(int sample_index, float alpha = 0.03333, float omega = 0.31416);
+int get_data_point(int sample_index, float alpha = 0.023333, float omega = 0.157059);
 
 void drawGrid(bool buffer_full = false, int first_sample_index = 0, int last_sample_index = 0);
 
@@ -145,10 +145,10 @@ void user_select() {
     if (prev_choice != user_choice) {
       tft.setTextColor(GRIDLINES_COLOUR, BACKGROUND_COLOUR);
       tft.drawString("0. ANALOG SIGNAL", X_DATUM, Y_DATUM+30);
-      tft.drawString("1. SINUSOID", X_DATUM, Y_DATUM+50);
-      tft.drawString("2. DECAYING SINUSOID", X_DATUM, Y_DATUM+70);
-      tft.drawString("3. SINE + COSINE", X_DATUM, Y_DATUM+90);
-      tft.drawString("4. SINE * COSINE", X_DATUM, Y_DATUM+110);
+      tft.drawString("1. PURE SINE WAVE", X_DATUM, Y_DATUM+50);
+      tft.drawString("2. COSINE + SINE", X_DATUM, Y_DATUM+70);
+      tft.drawString("3. FREQUENCY MODULATED WAVE", X_DATUM, Y_DATUM+90);
+      tft.drawString("4. AMPLITUDE MODULATED WAVE", X_DATUM, Y_DATUM+110);
       tft.drawString("5. ULTRASONIC SENSOR", X_DATUM, Y_DATUM+130);
     }
     tft.setTextColor(DATA_COLOUR, BACKGROUND_COLOUR);
@@ -158,20 +158,20 @@ void user_select() {
       tft.drawString("0. ANALOG SIGNAL", X_DATUM, Y_DATUM+30);
       break;
     case (1):
-      functionSelect = SINE;
-      tft.drawString("1. SINUSOID", X_DATUM, Y_DATUM+50);
+      functionSelect = PURE_SINUSOID;
+      tft.drawString("1. PURE SINE WAVE", X_DATUM, Y_DATUM+50);
       break;
     case (2):
-      functionSelect = DECAYING_SINE; 
-      tft.drawString("2. DECAYING SINUSOID", X_DATUM, Y_DATUM+70);
+      functionSelect = COSINE_SINE_SUM; 
+      tft.drawString("2. COSINE + SINE", X_DATUM, Y_DATUM+70);
       break;
     case (3):
-      functionSelect = COSINE_SINE_SUM;
-      tft.drawString("3. SINE + COSINE", X_DATUM, Y_DATUM+90);
+      functionSelect = FREQUENCY_MODULATION;
+      tft.drawString("3. FREQUENCY MODULATED WAVE", X_DATUM, Y_DATUM+90);
       break;
     case (4):
-      functionSelect = COSINE_SINE_PRODUCT;
-      tft.drawString("4. SINE * COSINE", X_DATUM, Y_DATUM+110);
+      functionSelect = AMPLITUDE_MODULATION;
+      tft.drawString("4. AMPLITUDE MODULATED WAVE", X_DATUM, Y_DATUM+110);
       break;
     case (5):
       functionSelect = ULTRASONIC_SIGNAL;
@@ -191,28 +191,28 @@ void user_select() {
 }
 
 int get_data_point(int sample_index, float alpha, float omega) {
-  float omega_t = 1000 * omega / delayMillis;
-  float alpha_t = 1000 * alpha / delayMillis;
+  float omega_act = 1000 * omega / delayMillis;
+  float alpha_act = 1000 * alpha / delayMillis;
   switch (functionSelect) {
   case (ANALOG_READ):
     sprintf(functionName, "Reading Analog Pin %d", ANALOG_INPUT_PIN);
     return analogRead(ANALOG_INPUT_PIN);
-  case (SINE):
+  case (PURE_SINUSOID):
     if (auto_ranging) auto_ranging = false;
-    sprintf(functionName, "sin(%.4ft)", omega_t);
+    sprintf(functionName, "sin(%.2ft)", omega_act);
     return max_y_value/2 * (1 + sin(sample_index * omega));
-  case (DECAYING_SINE):
-    if (auto_ranging) auto_ranging = false;
-    sprintf(functionName, "exp(-%.4ft)sin(%.4ft)", alpha_t, omega_t);
-    return max_y_value/2 * (1 + pow(2.71828f, -sample_index * alpha) * sin(sample_index * omega));
   case (COSINE_SINE_SUM):
     if (auto_ranging) auto_ranging = false;
-    sprintf(functionName, "cos(%.4ft)+sin(%.4ft)", alpha_t, omega_t);
-    return max_y_value/4 * (2 + cos(sample_index * alpha) + sin(sample_index * omega));
-  case (COSINE_SINE_PRODUCT):
+    sprintf(functionName, "cos(%.2ft)+sin(%.2ft)", alpha_act, 2*omega_act);
+    return max_y_value/4 * (2 + cos(sample_index * alpha) + sin(sample_index * 2*omega));
+  case (FREQUENCY_MODULATION):
     if (auto_ranging) auto_ranging = false;
-    sprintf(functionName, "cos(%.4ft)sin(%.4ft)", alpha_t, omega_t);
-    return max_y_value/2 * (1 + cos(sample_index * alpha) * sin(sample_index * omega));
+    sprintf(functionName, "cos(%.2ft+%.1fsin(%.2ft))", omega_act, 10*omega_act, 16*alpha_act);
+    return max_y_value/2 * (1 + cos(sample_index * omega + 10 * omega * sin(sample_index * 16*alpha)));
+  case (AMPLITUDE_MODULATION):
+    if (auto_ranging) auto_ranging = false;
+    sprintf(functionName, "cos(%.2ft)sin(%.2ft)", alpha_act, 4*omega_act);
+    return max_y_value/2 * (1 + cos(sample_index * alpha) * sin(sample_index * 4*omega));
   case (ULTRASONIC_SIGNAL):
     sprintf(functionName, "Distance to Object (cm)");
     pollUltrasonicSensor();
