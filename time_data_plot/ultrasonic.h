@@ -1,8 +1,6 @@
 #ifndef ULTRASONIC_H
 #define ULTRASONIC_H
 
-// Ultrasonic header file
-
 extern int ULTRASONIC_TRIGGER;
 extern int ULTRASONIC_ECHO;
 
