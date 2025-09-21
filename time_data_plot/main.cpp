@@ -12,7 +12,7 @@ int funcAmplitude = 1;
 bool autoRanging = true;
 bool enableScrolling = true;
 bool enableUserSelect = true;
-bool enableGridlines = false;
+bool enableGridlines = true;
 
 int AUTO_STEP = 20;
 int X_STEP = 4;
@@ -129,17 +129,19 @@ void loop() {
     if (prevLeft && !currLeft) { // Press left button to turn off scrolling and refresh grid
       enableGridlines = true;
       drawGrid();
-      enableScrolling = false;
+      //enableScrolling = false;
     } else if (prevRight && !currRight) { // Press right button to enable scrolling
       enableGridlines = false;
-      enableScrolling = true;
+      //enableScrolling = true;
     }
     if (sampleIndex > 0 && writeIndex == 0) { // Refresh grid when looping back to start of buffer
       if (autoRanging) { // Auto-ranging: take double the average or 1.5x the running maximum 
         int doubleAverage = (2*(runningSum / NUM_DATA_POINTS) / AUTO_STEP + 1) * AUTO_STEP;
         maxY = (3 * runningMax / 2) / AUTO_STEP * AUTO_STEP;
         if (doubleAverage > maxY) maxY = doubleAverage;
-        maxY = constrain(maxY, MIN_Y_RANGE, 4100);
+        if (maxY < MIN_Y_RANGE) maxY = MIN_Y_RANGE;
+        if (maxY > 4095) maxY = 4080;
+        //maxY = constrain(maxY, MIN_Y_RANGE, 4100);
       }
       if (!enableScrolling) drawGrid();
       runningMax = 0;
@@ -204,10 +206,12 @@ void userSelectFunction() {
     tft.setTextColor(AXIS_COLOUR, BACKGROUND_COLOUR);
     prevChoice = currChoice;
     if (prevLeft && !currLeft) {
-      if (functionSelect != ANALOG_READ && functionSelect != CUSTOM_FUNCTION)
+      if (functionSelect != ANALOG_READ && functionSelect != CUSTOM_FUNCTION) {
         autoRanging = false;
-      if (functionSelect == COSINE_SINE_SUM)
+        maxY = Y_HEIGHT;
+      } if (functionSelect == COSINE_SINE_SUM) {
         funcAmplitude = 2;
+      }
       startPlotting = true;
     }
     prevLeft = currLeft;
