@@ -9,14 +9,15 @@
 int delayMillis = 75; 
 
 // Initial estimate of maximum analogue reading
-int max_y_value = 200;
+int max_y_value = 100;
+int old_max_y_value = 0;
 bool auto_y_range = false;
 bool interpolate_between_points = true;
 
 const int AUTO_Y_STEP = 20;
 
 // Define spacing between data points
-const int X_STEP = 2;
+const int X_STEP = 3;
 
 enum function {
   ANALOG_READ,
@@ -24,7 +25,7 @@ enum function {
   DECAYING_SINE,
   COSINE_SINE_SUM,
   COSINE_SINE_PRODUCT,
-  ULTRASONIC_SIGNAL
+  ULTRASONIC_DISTANCE
 };
 
 function functionSelect = ANALOG_READ;
@@ -160,7 +161,7 @@ void user_select() {
       tft.drawString("4. SINE * COSINE", X_DATUM, Y_DATUM+110);
       break;
     case (5):
-      functionSelect = ULTRASONIC_SIGNAL;
+      functionSelect = ULTRASONIC_DISTANCE;
       tft.drawString("5. ULTRASONIC SENSOR", X_DATUM, Y_DATUM+130);
       break;
     }
@@ -177,7 +178,7 @@ void user_select() {
   next_data_point(0);
 }
 
-int next_data_point(int sample_index, float omega, float alpha) {
+int next_data_point(int sample_index, float alpha, float omega) {
   switch (functionSelect) {
   case (ANALOG_READ):
     if (!auto_y_range) auto_y_range = true;
@@ -195,8 +196,8 @@ int next_data_point(int sample_index, float omega, float alpha) {
   case (COSINE_SINE_PRODUCT):
     sprintf(functionName, "cos(%.3ft)sin(%.3ft)", alpha, omega);
     return max_y_value/2 * (1 + cos(sample_index * alpha) * sin(sample_index * omega));
-  case (ULTRASONIC_SIGNAL):
-    sprintf(functionName, "Ultrasonic Sensor Data");
+  case (ULTRASONIC_DISTANCE):
+    sprintf(functionName, "Distance to Object (cm)");
     pollUltrasonicSensor();
     return ultrasonicDistanceNearestCm;
   default:
@@ -205,15 +206,19 @@ int next_data_point(int sample_index, float omega, float alpha) {
 }
 
 void drawGrid() {
-  tft.fillScreen(BACKGROUND_COLOUR);
-  tft.drawNumber(max_y_value, X_DATUM-8, Y_DATUM-3); // labels with padding (right indent)
-  tft.drawNumber(max_y_value/2, X_DATUM-8, Y_DATUM-3 + Y_HEIGHT/2);
-  tft.drawNumber(0, X_DATUM-8, Y_DATUM-3 + Y_HEIGHT);
-  for (int i = 1; i < NUM_X_TICKS-1; i++) {
+  tft.fillRect(X_DATUM-1, Y_DATUM-1, X_LENGTH+2, Y_HEIGHT+2, BACKGROUND_COLOUR);
+  for (int i = 1; i < NUM_X_TICKS-1; i++)
     tft.drawFastVLine(X_DATUM + i*X_TICK_SIZE, Y_DATUM, Y_HEIGHT, GRIDLINES_COLOUR);
-  }
-  for (int i = 1; i < NUM_Y_TICKS-1; i++) {
+  for (int i = 1; i < NUM_Y_TICKS-1; i++)
     tft.drawFastHLine(X_DATUM, Y_DATUM + i*Y_TICK_SIZE, X_LENGTH, GRIDLINES_COLOUR);
+  tft.drawRect(X_DATUM-2, Y_DATUM-2, X_LENGTH+4, Y_HEIGHT+4, AXIS_COLOUR); // with padding
+  tft.drawString(functionName, X_DATUM + X_LENGTH-8, Y_DATUM + 7); // with padding
+  if (old_max_y_value != max_y_value) {
+    tft.fillRect(0, 0, X_DATUM-8, 170, BACKGROUND_COLOUR);
+    tft.drawNumber(max_y_value, X_DATUM-8, Y_DATUM-3); // labels with padding (right indent)
+    tft.drawNumber(max_y_value/2, X_DATUM-8, Y_DATUM-3 + Y_HEIGHT/2);
+    tft.drawNumber(0, X_DATUM-8, Y_DATUM-3 + Y_HEIGHT);
+    old_max_y_value = max_y_value;
   }
   tft.drawRect(X_DATUM-2, Y_DATUM-2, X_LENGTH+4, Y_HEIGHT+4, AXIS_COLOUR); // with padding
   tft.drawString(functionName, X_DATUM + X_LENGTH-8, Y_DATUM + 7); // with padding
