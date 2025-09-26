@@ -1,75 +1,104 @@
-// Time-Data Plotter (Circular Buffer)
+// Time Data Plot with Circular Buffer
 // Author: Allan Wu (23810308)
-// Date: 21 September 2025
+// Updated: 26 September 2025
 #include <Arduino.h>
 #include <TFT_eSPI.h>
-#include "ultrasonic.h"
 
 // Set update speed (don't set too fast or the TTGO will overheat)
-int delayMillis = 200; 
-
-// Initial estimate of maximum analogue reading
-int maxY = 100;
-int oldMaxY = 0;
+int delayMillis = 100;
+// Fixed y-labels for mathematical functions e.g. sin(x)
+int funcMaximum = 1;
+int funcAverage = 0; 
+int funcMinimum = -1;
 bool autoRanging = true;
-
-const int AUTO_RANGE_STEP = 20;
-
-// Define spacing between data points
-const int X_STEP = 3;
-
+bool enableScrolling = true;
 bool enableUserSelect = true;
+bool enableGridlines = false;
+
+int AUTO_STEP = 20;
+int X_STEP = 4;
+int MIN_Y_RANGE = 40;
+int NUM_SAMPLES_TO_BUFFER = 5;
+
+
+const float ALPHA = 0.0421489;
+const float OMEGA = 0.1570796;
+
+int maxY = MIN_Y_RANGE; // Initialise to this value
+int oldMaxY = 0;
+
+#define ANALOG_INPUT_PIN 10
+#define LEFT_BUTTON 0
+#define RIGHT_BUTTON 14
+
+// Configure plot colours
+uint16_t BACKGROUND_COLOUR = TFT_BLACK;
+uint16_t GRIDLINES_COLOUR = 0x2965;
+uint16_t AXIS_COLOUR = TFT_SILVER;
+uint16_t DATA_COLOUR = TFT_GOLD;
+
+#define X_DATUM 32
+#define Y_DATUM 20
+#define X_LENGTH 280
+#define Y_HEIGHT 140
+int X_TICK_SIZE = 14;
+int Y_TICK_SIZE = 14;
+int NUM_X_TICKS = (X_LENGTH / X_TICK_SIZE) + 1;
+int NUM_Y_TICKS = (Y_HEIGHT / Y_TICK_SIZE) + 1;
+int NUM_DATA_POINTS = (X_LENGTH / X_STEP) + 1;
+
+#define MAX_BUFFER_CAPACITY 320
+#define CHAR_BUFFER_SIZE 50
 enum function {
   ANALOG_READ,
   PURE_SINUSOID,
   COSINE_SINE_SUM,
   FREQUENCY_MODULATION,
   AMPLITUDE_MODULATION,
-  ULTRASONIC_SENSOR
+  CUSTOM_FUNCTION
+};
+char functionNames[6][CHAR_BUFFER_SIZE] = {
+  "0. ANALOG READ",
+  "1. SINE FUNCTION",
+  "2. SUM OF SINUSOIDS",
+  "3. FREQUENCY MODULATED WAVE",
+  "4. AMPLITUDE MODULATED WAVE",
+  "5. USER DEFINED FUNCTION"
 };
 function functionSelect = ANALOG_READ;
-char functionName[50];
-
-// For the ANALOG_READ option, read analog values from this pin:
-#define ANALOG_INPUT_PIN 3
-#define LEFT_BUTTON 0
-#define RIGHT_BUTTON 14
-
-// Configure plot colours
-bool enableGridlines = true;
-#define BACKGROUND_COLOUR TFT_BLACK
-#define GRIDLINES_COLOUR 0x2965
-#define AXIS_COLOUR TFT_SILVER
-#define DATA_COLOUR TFT_GOLD
-
-#define X_DATUM 35
-#define Y_DATUM 20
-#define X_LENGTH 270
-#define Y_HEIGHT 140
-
-const int X_TICK_SIZE = 15;
-const int Y_TICK_SIZE = 14;
-const int NUM_X_TICKS = (X_LENGTH / X_TICK_SIZE) + 1;
-const int NUM_Y_TICKS = (Y_HEIGHT / Y_TICK_SIZE) + 1;
-const int NUM_DATA_POINTS = (X_LENGTH / X_STEP) + 1;
-
-int buffer[NUM_DATA_POINTS];
+int buffer[MAX_BUFFER_CAPACITY];
+char functionName[CHAR_BUFFER_SIZE];
+int prevLeft = 0, prevRight = 0, currLeft, currRight;
+TFT_eSPI tft = TFT_eSPI(); // (320 x 170)
 
 void userSelectFunction();
 
-int getDataPoint(int sampleIndex, float alpha = 0.023333, float omega = 0.157059);
+int getCustomData(int sampleIndex);
+
+int getDataPoint(int sampleIndex, float alpha = ALPHA, float omega = OMEGA, int (*op)(int)=getCustomData);
 
 void drawGrid(bool bufferFull = false, int start = 0, int end = 0);
 
-TFT_eSPI tft = TFT_eSPI(); // 320 x 170
+char customFunctionName[CHAR_BUFFER_SIZE] = "2t mod 50";
+
+int getCustomData(int sampleIndex) {
+  return 2*sampleIndex % 50;
+  /*
+  static bool sensorSetupDone = false;
+  if (!sensorSetupDone) {
+    setupUltrasonicSensor();
+    sensorSetupDone = true;
+  }
+  pollUltrasonicSensor();
+  return ultrasonicDistanceNearestCm;
+  */
+}
 
 void setup() {
-  Serial.begin(115200);
   tft.init();
   tft.setRotation(3);
   tft.setTextSize(1);
   tft.fillScreen(BACKGROUND_COLOUR);
-  setupUltrasonicSensor();
   if (enableUserSelect) userSelectFunction();
   getDataPoint(0); // Sets function name
   tft.setTextDatum(CC_DATUM);
@@ -77,111 +106,125 @@ void setup() {
   tft.setTextDatum(TR_DATUM);
   drawGrid();
   if (!autoRanging) { // Override labels for math functions
-    tft.drawNumber(1, X_DATUM-8, Y_DATUM-3);
-    tft.drawNumber(0, X_DATUM-8, Y_DATUM-3 + Y_HEIGHT/2);
-    tft.drawNumber(-1, X_DATUM-8, Y_DATUM-3 + Y_HEIGHT);
+    tft.drawNumber(funcMaximum, X_DATUM-5, Y_DATUM-3);
+    tft.drawNumber(funcAverage, X_DATUM-5, Y_DATUM-3 + Y_HEIGHT/2);
+    tft.drawNumber(funcMinimum, X_DATUM-5, Y_DATUM-3 + Y_HEIGHT);
   }
 }
 
 void loop() {
   static unsigned long lastUpdateTime = millis();
   static unsigned long sampleIndex = 0;
-  unsigned long firstSample = sampleIndex - NUM_DATA_POINTS + 1;
-  int startIndex = firstSample % NUM_DATA_POINTS;
-  int writeIndex = sampleIndex % (NUM_DATA_POINTS); // end-point inclusive
-  int rawData = getDataPoint(sampleIndex);
-  buffer[writeIndex] = rawData; // store in buffer, overwrites old value
-
-  static int runningMax = 0, runningSum = 0;
+  static unsigned long startSampleIndex = sampleIndex - NUM_DATA_POINTS + 1;
   static int prevX = -1, prevY = -1;
-  runningSum += rawData;
-  if (rawData > runningMax) runningMax = rawData;
-
-  if (sampleIndex > 0 && writeIndex == 0) {
-    if (autoRanging) {
-      maxY = constrain(runningMax + runningSum / NUM_DATA_POINTS, 0, 4095) / AUTO_RANGE_STEP * AUTO_RANGE_STEP;
+  static int runningMax = 0, runningSum = 0;
+  if (millis() - lastUpdateTime >= delayMillis) {
+    int rawData = getDataPoint(sampleIndex);
+    if (rawData > maxY) { // Increase maxY if necessary
+      maxY = (rawData / AUTO_STEP + 1)* AUTO_STEP;
+      drawGrid();
     }
-    runningMax = 0;
-    runningSum = 0;
-    prevX = -1;
-    prevY = -1;
+    int startIndex = startSampleIndex % NUM_DATA_POINTS;
+    int writeIndex = sampleIndex % NUM_DATA_POINTS;
+    buffer[writeIndex] = rawData; // Store raw value in buffer, overwrites old value
+    runningSum += rawData;
+    if (rawData > runningMax) runningMax = rawData;
+    currLeft = !digitalRead(LEFT_BUTTON);
+    currRight = !digitalRead(RIGHT_BUTTON);
+    if (prevLeft && !currLeft) { // Press left button to turn off scrolling and refresh grid
+      if (enableScrolling) enableScrolling = false;
+      else enableGridlines = !enableGridlines;
+      drawGrid();
+    } else if (prevRight && !currRight) { // Press right button to enable scrolling
+      if (!enableScrolling) enableScrolling = true;
+      else enableGridlines = !enableGridlines;
+    }
+    if (sampleIndex > 0 && writeIndex == 0) { // Refresh grid when looping back to start of buffer
+      if (autoRanging) { // Auto-ranging: take double the average or 1.5x the running maximum 
+        int doubleAverage = (2*(runningSum / NUM_DATA_POINTS) / AUTO_STEP + 1) * AUTO_STEP;
+        maxY = (3 * runningMax / 2) / AUTO_STEP * AUTO_STEP;
+        if (doubleAverage > maxY) maxY = doubleAverage;
+        if (maxY < MIN_Y_RANGE) maxY = MIN_Y_RANGE;
+        if (maxY > 4095) maxY = 4080;
+      }
+      if (!enableScrolling) drawGrid();
+      runningMax = 0;
+      runningSum = 0;
+      prevX = -1;
+      prevY = -1;
+    }
+    int normalisedY = constrain(map(rawData, 0, maxY, 0, Y_HEIGHT), 0, Y_HEIGHT);
+    int currX = X_DATUM + writeIndex * X_STEP;
+    int currY = Y_DATUM + (Y_HEIGHT - normalisedY);
+    // Plot data point or line
+    if (!enableScrolling || sampleIndex < NUM_DATA_POINTS) { // If buffer is not full
+      if (prevX > 0 && prevY > 0) {
+        tft.drawLine(prevX, prevY, currX, currY, DATA_COLOUR);
+      } else {
+        tft.drawPixel(currX, currY, DATA_COLOUR);
+      }
+    } else {
+      static int samplesBuffered = 0;
+      if (samplesBuffered < NUM_SAMPLES_TO_BUFFER) {
+        samplesBuffered++;
+      } else {
+        drawGrid(true, startIndex, writeIndex); // Note that this is end-point inclusive
+        samplesBuffered = 0;
+      }
+    }
+    prevX = currX;
+    prevY = currY;
+    prevLeft = currLeft;
+    prevRight = currRight;
+    sampleIndex++;
+    startSampleIndex++;
+    lastUpdateTime = millis();
   }
-  int normalisedY = constrain(map(rawData, 0, maxY, 0, Y_HEIGHT), 0, Y_HEIGHT);
-  int currX = X_DATUM + writeIndex * X_STEP;
-  int currY = Y_DATUM + (Y_HEIGHT - normalisedY);
-
-  // Draw data line / point
-  if (sampleIndex < NUM_DATA_POINTS) { // buffer not full yet
-    if (prevX != -1 && prevY != -1)
-      tft.drawLine(prevX, prevY, currX, currY, DATA_COLOUR);
-    else
-      tft.drawPixel(currX, currY, DATA_COLOUR);
-  } else { // buffer is full
-    // Serial.printf("start: %3d, write: %3d\n", startIndex, writeIndex);
-    drawGrid(true, startIndex, writeIndex);
-  }
-
-  prevX = currX;
-  prevY = currY;
-  sampleIndex++;
-
-  int actualDelay = delayMillis - (millis()-lastUpdateTime);
-  if (actualDelay > 0) delay(actualDelay);
-  lastUpdateTime = millis();
 }
 
 void userSelectFunction() {
-  int prevLeft = 0, prevRight = 0, currLeft, currRight;
-  int prevChoice = -1;
-  int currChoice = 0;
+  int prevChoice = -1, currChoice = 0;
+  bool startPlotting = false;
   tft.setTextFont(2);
-  tft.drawString("SELECT FUNCTION", X_DATUM, Y_DATUM-5);
-  while (true) {
+  tft.drawString("[ SELECT FUNCTION TO PLOT ]", X_DATUM, Y_DATUM-5);
+  while (!startPlotting) {
     currLeft = !digitalRead(LEFT_BUTTON);
     currRight = !digitalRead(RIGHT_BUTTON);
-    if (prevRight && !currRight) currChoice = (currChoice + 1) % 5;
+    if (prevRight && !currRight) currChoice = (currChoice + 1) % 6;
     if (prevChoice != currChoice) {
       tft.setTextColor(GRIDLINES_COLOUR, BACKGROUND_COLOUR);
-      tft.drawString("0. ANALOG READ", X_DATUM, Y_DATUM+20);
-      tft.drawString("1. PURE SINE WAVE", X_DATUM, Y_DATUM+40);
-      tft.drawString("2. COSINE + SINE", X_DATUM, Y_DATUM+60);
-      tft.drawString("3. FREQUENCY MODULATED WAVE", X_DATUM, Y_DATUM+80);
-      tft.drawString("4. AMPLITUDE MODULATED WAVE", X_DATUM, Y_DATUM+100);
-      tft.drawString("5. ULTRASONIC SENSOR", X_DATUM, Y_DATUM+120);
-    }
-    tft.setTextColor(DATA_COLOUR, BACKGROUND_COLOUR);
-    switch (currChoice) {
-    case (0):
-      functionSelect = ANALOG_READ;
-      tft.drawString("0. ANALOG READ", X_DATUM, Y_DATUM+20);
-      break;
-    case (1):
-      functionSelect = PURE_SINUSOID;
-      tft.drawString("1. PURE SINE WAVE", X_DATUM, Y_DATUM+40);
-      break;
-    case (2):
-      functionSelect = COSINE_SINE_SUM;
-      tft.drawString("2. COSINE + SINE", X_DATUM, Y_DATUM+60);
-      break;
-    case (3):
-      functionSelect = FREQUENCY_MODULATION;
-      tft.drawString("3. FREQUENCY MODULATED WAVE", X_DATUM, Y_DATUM+80);
-      break;
-    case (4):
-      functionSelect = AMPLITUDE_MODULATION;
-      tft.drawString("4. AMPLITUDE MODULATED WAVE", X_DATUM, Y_DATUM+100);
-      break;
-    case (5):
-      functionSelect = ULTRASONIC_SENSOR;
-      tft.drawString("5. ULTRASONIC SENSOR", X_DATUM, Y_DATUM+120);
-      break;
+      for (int i = 0; i < 6; i++) {
+        tft.drawString(functionNames[i], X_DATUM, Y_DATUM+20*(i+1));
+      }
+      tft.setTextColor(DATA_COLOUR, BACKGROUND_COLOUR);
+      tft.drawString(functionNames[currChoice], X_DATUM, Y_DATUM+20*(currChoice+1));
+      switch (currChoice) {
+        case (0):
+          functionSelect = ANALOG_READ; break;
+        case (1):
+          functionSelect = PURE_SINUSOID; break;
+        case (2):
+          functionSelect = COSINE_SINE_SUM; break;
+        case (3):
+          functionSelect = FREQUENCY_MODULATION; break;
+        case (4):
+          functionSelect = AMPLITUDE_MODULATION; break;
+        case (5):
+          functionSelect = CUSTOM_FUNCTION; break;
+      }
     }
     tft.setTextColor(AXIS_COLOUR, BACKGROUND_COLOUR);
     prevChoice = currChoice;
     if (prevLeft && !currLeft) {
-      if (functionSelect != ANALOG_READ && functionSelect != ULTRASONIC_SENSOR)
+      if (functionSelect != ANALOG_READ && functionSelect != CUSTOM_FUNCTION) {
         autoRanging = false;
-      break;
+        maxY = Y_HEIGHT;
+      } if (functionSelect == COSINE_SINE_SUM) {
+        funcMaximum = 2;
+        funcAverage = 0; 
+        funcMinimum = -2;
+      }
+      startPlotting = true;
     }
     prevLeft = currLeft;
     prevRight = currRight;
@@ -190,7 +233,7 @@ void userSelectFunction() {
   tft.setTextFont(1);
 }
 
-int getDataPoint(int sampleIndex, float alpha, float omega) {
+int getDataPoint(int sampleIndex, float alpha, float omega, int (*op)(int)) {
   float omegaAct = 1000 * omega / delayMillis;
   float alphaAct = 1000 * alpha / delayMillis;
   switch (functionSelect) {
@@ -204,15 +247,14 @@ int getDataPoint(int sampleIndex, float alpha, float omega) {
     sprintf(functionName, "cos(%.2ft)+sin(%.2ft)", alphaAct, 2*omegaAct);
     return maxY/4 * (2 + cos(sampleIndex * alpha) + sin(sampleIndex * 2*omega));
   case (FREQUENCY_MODULATION):
-    sprintf(functionName, "cos(%.2ft+%.1fsin(%.2ft))", omegaAct, 10*omegaAct, 16*alphaAct);
-    return maxY/2 * (1 + cos(sampleIndex * omega + 10 * omega * sin(sampleIndex * 16*alpha)));
+    sprintf(functionName, "cos(%.2ft+%.1fsin(%.2ft))", omegaAct, 10*omegaAct, 10*alphaAct);
+    return maxY/2 * (1 + cos(sampleIndex * omega + 10 * omega * sin(sampleIndex * 10*alpha)));
   case (AMPLITUDE_MODULATION):
-    sprintf(functionName, "cos(%.2ft)sin(%.2ft)", alphaAct, 4*omegaAct);
-    return maxY/2 * (1 + cos(sampleIndex * alpha) * sin(sampleIndex * 4*omega));
-  case (ULTRASONIC_SENSOR):
-    sprintf(functionName, "Distance to Object (cm)");
-    pollUltrasonicSensor();
-    return ultrasonicDistanceNearestCm;
+    sprintf(functionName, "cos(%.2ft)sin(%.2ft)", 1.5*alphaAct, 5*omegaAct);
+    return maxY/2 * (1 + cos(sampleIndex * 1.5*alpha) * sin(sampleIndex * 5*omega));
+  case (CUSTOM_FUNCTION):
+    sprintf(functionName, customFunctionName);
+    return op(sampleIndex);
   default:
     return 0;
   }
@@ -230,10 +272,10 @@ void drawGrid(bool bufferFull, int start, int end) {
   tft.drawRect(X_DATUM-2, Y_DATUM-2, X_LENGTH+4, Y_HEIGHT+4, AXIS_COLOUR); // with padding
   // Update y-range if auto ranging enabled
   if (autoRanging && oldMaxY != maxY) {
-    tft.fillRect(0, 0, X_DATUM-8, 170, BACKGROUND_COLOUR);
-    tft.drawNumber(maxY, X_DATUM-8, Y_DATUM-3); // labels with padding (right indent)
-    tft.drawNumber(maxY/2, X_DATUM-8, Y_DATUM-3 + Y_HEIGHT/2);
-    tft.drawNumber(0, X_DATUM-8, Y_DATUM-3 + Y_HEIGHT);
+    tft.fillRect(0, 0, X_DATUM-5, 170, BACKGROUND_COLOUR);
+    tft.drawNumber(maxY, X_DATUM-5, Y_DATUM-3); // labels with padding (right indent)
+    tft.drawNumber(maxY/2, X_DATUM-5, Y_DATUM-3 + Y_HEIGHT/2);
+    tft.drawNumber(0, X_DATUM-5, Y_DATUM-3 + Y_HEIGHT);
     oldMaxY = maxY;
   }
   // Draw plot from buffer
@@ -248,11 +290,9 @@ void drawGrid(bool bufferFull, int start, int end) {
       int currX = X_DATUM + x * X_STEP;
       int currY = Y_DATUM + (Y_HEIGHT - normalisedY);
       tft.drawLine(prevX, prevY, currX, currY, DATA_COLOUR);
-      // Serial.printf("PREV: (%3d,%3d), CURR: (%3d, %3d)\n", prevX, prevY, currX, currY);
       prevX = currX;
       prevY = currY;
       prevIndex = i;
     }
   }
-  Serial.println(millis());
 }
