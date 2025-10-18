@@ -19,26 +19,31 @@ void setup() {
 }
 
 void loop() {
-    playSong(Megalovania1);
-    playSong(Megalovania2);
+    playSong(TheLegend0);
+    playSong(TheLegend1);
+    playSong(TheLegend2);
+    playSong(TheLegend3);
     delay(1000);
 }
 
 void playSong(Song_t song)
 {
-    const int N = song.numNotes;
+    const int songLength = song.numNotes;
     const int dx = 320/song.barPeriod;
     const int dy = 150/(song.maxFreqIndex - song.minFreqIndex);
-    const int pause = 10;
+    const int pause = 20;
 
     int freq, n, T;
-    int bars = 0, drawTime = millis();
+    int periods = 0;
+    unsigned long startTime;
+    int act_delay;
     tft.drawFastHLine(0, 20, 320, TFT_WHITE);
-    for (int i = 0, j = 0; i < N; i++) {
+    for (int i = 0, j = 0; i < songLength; i++) {
+        startTime = millis();
         n = song.notes[i].freqIndex;
         T = song.notes[i].noteLength * song.period;
         tft.setCursor(0, 0);
-        if (bars % (song.barPeriod) == 0) {
+        if (periods % (song.barPeriod) == 0) {
             tft.fillRect(0, 21, 320, 149, TFT_BLACK); 
             j = 0; 
         }
@@ -46,18 +51,18 @@ void playSong(Song_t song)
             freq = TONE_FREQS[n];
             tone(BUZZER_PIN, freq);
             tft.drawFastHLine(j*dx, 169-dy*(n-song.minFreqIndex), dx*(T/song.period)-3, TFT_GOLD);
-            tft.printf("%02d/%2d:%-2s %-4d %s", i+1, N, TONE_NAMES[n % 12], freq, song.name);
+            tft.printf("%02d/%2d:%-2s %-4d %s", i+1, songLength, TONE_NAMES[n % 12], freq, song.name);
             delay(T-pause);
         } else {
             noTone(BUZZER_PIN);
             tft.drawFastHLine(j*dx, 169, dx*(T/song.period)-2, 0x2104);
-            tft.printf("%02d/%2d:--      %s", i+1, N, song.name);
+            tft.printf("%02d/%2d:--      %s", i+1, songLength, song.name);
             delay(T-pause);
         }
-        bars += song.notes[i].noteLength;
+        periods += song.notes[i].noteLength;
         j += T/song.period;
-        delay(constrain(pause - (millis() - drawTime), 0, pause));
-        drawTime = millis();
+        act_delay = T - (millis() - startTime);
+        if (act_delay > 0) delay(act_delay);
     }
     noTone(BUZZER_PIN);
 }
