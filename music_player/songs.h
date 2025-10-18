@@ -19,14 +19,14 @@ typedef struct {
 } Note;
 
 typedef struct {
-    const char *name;
-	int overflow;
-    Note *notes;
-    int numNotes;
-    int period;
-    int barPeriod;
-    int minFreqIndex;
-    int maxFreqIndex;
+    const char *name; // Song name (12 characters maximum)
+	const char *overflow; // Remainder of song name (12 characters maximum)
+    Note *notes; // Array of notes {freqIndex, noteLength}
+    int numNotes; // Size of note array
+    int period; // Millisecond duration of shortest note
+    int bar; // Number of shortest note durations in 1 bar
+    int minFreqIndex; // Only used for scaling TFT
+    int maxFreqIndex; // Only used for scaling TFT
 } Song_t;
 
 Note megalovania1[] = {
@@ -106,8 +106,9 @@ Note legend3[] = {
 
 Song_t Megalovania1 = {"MEGALOVANIA ", 0, megalovania1, 52, 125, 16, 0, 36};
 Song_t Megalovania2 = {"MEGALOVANIA ", 0, megalovania2, 52, 125, 16, 0, 36};
-Song_t TheLegend0 = {"THE LEGEND 0/3            THE LEGEND 0", 26, legend0, 33, 273, 8, 0, 36};
-Song_t TheLegend1 = {"THE LEGEND 1/3            THE LEGEND 1", 26, legend1, 64, 273, 8, 0, 36};
-Song_t TheLegend2 = {"THE LEGEND 2/3            THE LEGEND 2", 26, legend2, 38, 136, 16, 0, 36};
-Song_t TheLegend3 = {"THE LEGEND 3/3            THE LEGEND 3", 26, legend3, 48, 182, 6, 0, 36};
+Song_t TheLegend0 = {"THE LEGEND  ", "LEGEND (0/3)", legend0, 33, 273, 8, 0, 36};
+Song_t TheLegend1 = {"THE LEGEND  ", "LEGEND (1/3)", legend1, 64, 273, 8, 0, 36};
+Song_t TheLegend2 = {"THE LEGEND  ", "LEGEND (2/3)", legend2, 38, 136, 16, 0, 36};
+Song_t TheLegend3 = {"THE LEGEND  ", "LEGEND (3/3)", legend3, 48, 182, 6, 0, 36};
+
 #endif
