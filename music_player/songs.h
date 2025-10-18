@@ -20,6 +20,7 @@ typedef struct {
 
 typedef struct {
     const char *name;
+	int overflow;
     Note *notes;
     int numNotes;
     int period;
@@ -99,14 +100,14 @@ Note legend3[] = {
 {21,4},{17,2},
 {20,2},{16,2},{14,2},
 {8,4},{20,2},
-{21,18},
+{21,12},
+{-1,6},
 };
 
-Song_t Megalovania1 = {"MEGALOVANIA", megalovania1, 52, 125, 16, 0, 36};
-Song_t Megalovania2 = {"MEGALOVANIA", megalovania2, 52, 125, 16, 0, 36};
-Song_t TheLegend0 = {"THE LEGEND 0", legend0, 33, 300, 32, 0, 36};
-Song_t TheLegend1 = {"THE LEGEND 1", legend1, 64, 300, 32, 0, 36};
-Song_t TheLegend2 = {"THE LEGEND 2", legend2, 38, 150, 32, 0, 36};
-Song_t TheLegend3 = {"THE LEGEND 3", legend3, 47, 185, 24, 0, 36};
-
+Song_t Megalovania1 = {"MEGALOVANIA ", 0, megalovania1, 52, 125, 16, 0, 36};
+Song_t Megalovania2 = {"MEGALOVANIA ", 0, megalovania2, 52, 125, 16, 0, 36};
+Song_t TheLegend0 = {"THE LEGEND 0/3            THE LEGEND 0", 26, legend0, 33, 273, 8, 0, 36};
+Song_t TheLegend1 = {"THE LEGEND 1/3            THE LEGEND 1", 26, legend1, 64, 273, 8, 0, 36};
+Song_t TheLegend2 = {"THE LEGEND 2/3            THE LEGEND 2", 26, legend2, 38, 136, 16, 0, 36};
+Song_t TheLegend3 = {"THE LEGEND 3/3            THE LEGEND 3", 26, legend3, 48, 182, 6, 0, 36};
 #endif
