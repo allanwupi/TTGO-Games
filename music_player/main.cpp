@@ -19,11 +19,10 @@ void setup() {
 }
 
 void loop() {
-    playSong(TheLegend0);
-    playSong(TheLegend1);
-    playSong(TheLegend2);
-    playSong(TheLegend3);
-
+    playSong(TheLegend0, 2);
+    playSong(TheLegend1, 2);
+    playSong(TheLegend2, 2);
+    playSong(TheLegend3, 2);
     playSong(Megalovania1, 1);
     playSong(Megalovania2, 1);
 }
@@ -31,9 +30,10 @@ void loop() {
 void playSong(Song_t song, int barsToDisplay)
 {
     const int songLength = song.numNotes;
-    const int dx = 320/barsToDisplay/song.barPeriod;
-    const int dy = 150/(song.maxFreqIndex - song.minFreqIndex);
-    const int pause = 25;
+    const int minN = song.minFreqIndex;
+    const int maxN = song.maxFreqIndex;
+    const int dx = 320/barsToDisplay/song.bar;
+    const int dy = 150/(maxN - minN);
     const int T0 = song.period;
 
     int freq, n, T;
@@ -43,21 +43,22 @@ void playSong(Song_t song, int barsToDisplay)
     tft.setCursor(0, 0);
     tft.printf("00/%2d:%-2s %-4d %.12s", songLength, TONE_NAMES[n % 12], freq, song.name);
     tft.drawFastHLine(0, 20, 320, TFT_WHITE);
-    for (int i = 0, j = 0, k = -1; i < songLength; i++) {
+    for (int i = 0, j = 0, k = 0; i < songLength; i++) {
         startTime = millis();
         n = song.notes[i].freqIndex;
         T = song.notes[i].noteLength * T0;
         tft.setCursor(0, 0);
-        if (periods % (barsToDisplay*song.barPeriod) == 0) {
+        if (periods % (barsToDisplay*song.bar) == 0) {
             tft.fillRect(0, 21, 320, 149, TFT_BLACK); 
-            j = 0; 
+            j = 0;
+            k = !k;
         }
         if (n > 0) {
             freq = TONE_FREQS[n];
             tone(BUZZER_PIN, freq);
-            tft.drawFastHLine(j*dx, 169-dy*(n-song.minFreqIndex), dx*(T/T0)-2, TFT_GOLD);
+            tft.drawFastHLine(j*dx, 169-dy*(n-minN), dx*(T/T0)-2, TFT_GOLD);
             if (song.overflow)
-                tft.printf("%02d/%2d:%-2s %-4d %.12s", i+1, songLength, TONE_NAMES[n % 12], freq, song.name+(i%(song.overflow+1)));
+                tft.printf("%02d/%2d:%-2s %-4d %.12s", i+1, songLength, TONE_NAMES[n % 12], freq, (k) ? song.name : song.overflow);
             else
                 tft.printf("%02d/%2d:%-2s %-4d %s", i+1, songLength, TONE_NAMES[n % 12], freq, song.name);
         } else {
