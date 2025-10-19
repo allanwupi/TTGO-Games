@@ -4,7 +4,7 @@
 #define NUM_FREQS 90 // Range from B0 to DS8
 
 #define REST 0
-#define B0  31
+#define NOTE_B0  31
 #define C1  33
 #define CS1 35
 #define D1  37
@@ -16,7 +16,7 @@
 #define GS1 52
 #define A1  55
 #define AS1 58
-#define B1  62
+#define NOTE_B1  62
 #define C2  65
 #define CS2 69
 #define D2  73
