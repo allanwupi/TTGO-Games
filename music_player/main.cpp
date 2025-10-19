@@ -3,6 +3,8 @@
 #include "songs.h"
 
 #define BUZZER_PIN 1
+#define NUM_SONGS 3
+
 #define LEFT_BUTTON 0
 #define RIGHT_BUTTON 14
 
@@ -71,13 +73,13 @@ void selectSong() {
     if (prevLeft && !currLeft) {
             startPlayer = true;
         } else if (prevRight && !currRight) {
-            currChoice = (currChoice + 1) % 3;
+            currChoice = (currChoice + 1) % NUM_SONGS;
         }
 
         if (prevChoice != currChoice) {
             tft.setTextColor(LOW_EMPHASIS_COLOUR, BACKGROUND_COLOUR);
 
-            for (int i = 0; i < 3; i++) {
+            for (int i = 0; i < NUM_SONGS; i++) {
             tft.drawString(SONG_DESCRIPTIONS[i], MENU_X_DATUM, MENU_Y_DATUM+23*i);
             }
 
