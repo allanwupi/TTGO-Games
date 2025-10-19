@@ -32,6 +32,7 @@ void setup() {
     digitalWrite(15, HIGH);
     tft.init();
     tft.setTextColor(PRIMARY_TEXT_COLOUR, BACKGROUND_COLOUR);
+    tft.setTextFont(0);
     tft.setTextSize(2);
     tft.setRotation(3);
     tft.fillScreen(BACKGROUND_COLOUR);
