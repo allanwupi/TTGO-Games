@@ -68,7 +68,6 @@ void selectSong() {
     currLeft = !digitalRead(LEFT_BUTTON);
     currRight = !digitalRead(RIGHT_BUTTON);
     if (prevLeft && !currLeft) {
-            tft.setTextFont(0);
             startPlayer = true;
         } else if (prevRight && !currRight) {
             currChoice = (currChoice + 1) % 3;
@@ -111,14 +110,14 @@ void playSong(Song_t song, int barsToDisplay)
     tft.setCursor(0, 0);
     tft.printf("000/%-3d: %-3s %.13s", songLength, TONE_NAMES[n], song.name);
     tft.drawFastHLine(0, 20, 320, TFT_WHITE);
-    for (int i = 0, j = 0, k = 0; i < songLength; i++) {
+    for (int i = 0, k = 0; i < songLength; i++) {
         startTime = millis();
         n = song.notes[i].freqIndex;
         T = song.notes[i].noteLength * T0;
         tft.setCursor(0, 0);
         if (periods % (barsToDisplay*song.bar) == 0) {
             tft.fillRect(0, 21, 320, 149, TFT_BLACK); 
-            j = 0;
+            periods = 0;
             k = !k;
         }
         if (n > 0) {
@@ -135,7 +134,6 @@ void playSong(Song_t song, int barsToDisplay)
             tft.printf("%3d/%-3d: ", i+1, songLength);
         }
         periods += song.notes[i].noteLength;
-        j += T/T0;
         act_delay = T - (millis() - startTime);
         if (act_delay > 0) delay(act_delay);
     }
