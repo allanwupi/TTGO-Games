@@ -25,6 +25,8 @@
 
 TFT_eSPI tft = TFT_eSPI();
 
+int screenOrientation = 3;
+
 int chosenSong;
 
 void playSong(Song_t song, int barsToDisplay = 2);
@@ -41,7 +43,7 @@ void setup()
     tft.setTextColor(PRIMARY_TEXT_COLOUR, BACKGROUND_COLOUR);
     tft.setTextFont(0);
     tft.setTextSize(2);
-    tft.setRotation(3);
+    tft.setRotation(screenOrientation);
     tft.fillScreen(BACKGROUND_COLOUR);
 	ledcSetup(TREBLE, 10000, 16);
 	ledcSetup(BASS, 10000, 16);
@@ -79,10 +81,19 @@ void selectSong() {
     tft.drawFastHLine(0, 20, 320, TFT_WHITE);
 
     while (!startPlayer) {
-    currLeft = !digitalRead(LEFT_BUTTON);
-    currRight = !digitalRead(RIGHT_BUTTON);
-    if (prevLeft && !currLeft) {
-            startPlayer = true;
+        currLeft = !digitalRead(LEFT_BUTTON);
+        currRight = !digitalRead(RIGHT_BUTTON);
+        if (prevLeft && !currLeft) {
+            if (currChoice == NUM_SONGS-1) {
+                screenOrientation = (screenOrientation > 1) ? 1 : 3;
+                tft.setRotation(screenOrientation);
+                tft.fillScreen(TFT_BLACK);
+                tft.setCursor(0, 0);
+                tft.printf(" WORST MUSIC PLAYER EVER ");
+                tft.drawFastHLine(0, 20, 320, TFT_WHITE);
+                prevChoice = -1;
+            }
+            else startPlayer = true;
         } else if (prevRight && !currRight) {
             currChoice = (currChoice + 1) % NUM_SONGS;
         }
