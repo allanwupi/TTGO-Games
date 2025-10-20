@@ -3,7 +3,10 @@
 #include "songs.h"
 #include "pitches.h"
 
-#define BUZZER_PIN 1
+#define TREBLE 1
+#define BASS 2
+#define TREBLE_BUZZER 1
+#define BASS_BUZZER 3
 
 #define LEFT_BUTTON 0
 #define RIGHT_BUTTON 14
@@ -28,8 +31,10 @@ void playSong(Song_t song, int barsToDisplay = 2);
 
 void selectSong();
 
-void setup() {
-    pinMode(BUZZER_PIN, OUTPUT);
+void setup()
+{
+    pinMode(TREBLE_BUZZER, OUTPUT);
+    pinMode(BASS_BUZZER, OUTPUT);
     pinMode(15, OUTPUT);
     digitalWrite(15, HIGH);
     tft.init();
@@ -38,11 +43,16 @@ void setup() {
     tft.setTextSize(2);
     tft.setRotation(3);
     tft.fillScreen(BACKGROUND_COLOUR);
+	ledcSetup(TREBLE, 10000, 16);
+	ledcSetup(BASS, 10000, 16);
+	ledcAttachPin(TREBLE_BUZZER, TREBLE);
+	ledcAttachPin(BASS_BUZZER, BASS);
     selectSong();
-    Serial.begin(115200);
+    //Serial.begin(115200);
 }
 
-void loop() {
+void loop()
+{
     switch (chosenSong) {
         case (0):
             playSong(Megalovania, 1);
@@ -131,7 +141,8 @@ void playSong(Song_t song, int barsToDisplay)
             k = !k;
         }
         if (freq) {
-            tone(BUZZER_PIN, freq);
+            ledcWriteTone(TREBLE, freq);
+            //ledcWriteTone(BASS, 294);
             for (n = minN ; n <= maxN ; n++) if (freq == TONE_INDEX[n]) break;
             tft.drawFastHLine(periods*dx, 169-dy*(n-minN), dx*(T/T0)-2, HIGH_EMPHASIS_COLOUR);
             if (song.overflow)
@@ -139,7 +150,8 @@ void playSong(Song_t song, int barsToDisplay)
             else
                 tft.printf("%3d/%-3d: %-3s %.13s", i+1, songLength, noteName, song.name);
         } else {
-            noTone(BUZZER_PIN);
+            ledcWriteTone(TREBLE, 0);
+            //ledcWriteTone(BASS, 294);
             tft.drawFastHLine(periods*dx, 169, dx*(T/T0)-2, LOW_EMPHASIS_COLOUR);
             tft.printf("%3d/%-3d: ", i+1, songLength);
         }
@@ -147,5 +159,6 @@ void playSong(Song_t song, int barsToDisplay)
         act_delay = T - (millis() - startTime);
         if (act_delay > 0) delay(act_delay);
     }
-    noTone(BUZZER_PIN);
+    ledcWriteTone(TREBLE, 0);
+    //ledcWriteTone(BASS, 0);
 }
